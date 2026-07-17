@@ -1,0 +1,37 @@
+name: Web
+
+on:
+  push:
+    paths:
+      - "web-client/**"
+      - ".github/workflows/web.yml"
+  pull_request:
+    paths:
+      - "web-client/**"
+      - ".github/workflows/web.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: web-client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web-client/.nvmrc
+          cache: npm
+          cache-dependency-path: web-client/package-lock.json
+      - name: Use locked npm version
+        run: npm install --global npm@12.0.0
+      - name: Install dependencies
+        run: npm ci
+      - name: Check formatting
+        run: npm run format:check
+      - name: Lint
+        run: npm run lint
+      - name: Test
+        run: npm test
+      - name: Build
+        run: npm run build

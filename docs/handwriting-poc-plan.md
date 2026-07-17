@@ -98,7 +98,8 @@ These values are tuning defaults, not protocol guarantees.
 
 - [x] Use React, TypeScript, and Vite in `web-client/`.
 - [x] Keep high-frequency point capture and drawing outside React state.
-- [x] Use Canvas 2D for visible ink and offscreen recognition rasterization.
+- [x] Use Canvas 2D for visible ink and deterministic software rasterization for
+  recognition input.
 - [x] Use a Web Worker for model initialization and inference.
 - [x] Use ONNX Runtime Web's WASM-only import.
 - [x] Use one WASM thread to avoid cross-origin-isolation requirements.
@@ -207,31 +208,40 @@ collected from users.
 
 ### Capture And Visible Rendering
 
-- [ ] Capture Pointer Events and coalesced points into stroke objects.
-- [ ] Use pointer capture until `pointerup` or `pointercancel`.
-- [ ] Accept only the primary pointer and the primary mouse button; ignore
+- [x] Capture Pointer Events and coalesced points into stroke objects.
+- [x] Use pointer capture until `pointerup` or `pointercancel`.
+- [x] Accept only the primary pointer and the primary mouse button; ignore
   additional simultaneous pointers.
-- [ ] On `pointercancel`, lost capture, resize, or orientation change, discard the
-  active partial stroke, preserve completed strokes, and cancel pending work.
-- [ ] Require a subsequent clean pointer interaction before recognizing preserved
-  strokes after cancellation.
-- [ ] Smooth visible traces with quadratic or equivalent interpolated curves.
-- [ ] Derive a restrained visible line-width response from filtered velocity.
-- [ ] Handle device-pixel ratio without changing logical stroke coordinates.
+- [x] On `pointercancel`, lost capture, resize, or orientation change, discard the
+  active partial stroke, preserve completed vectors in canonical coordinates,
+  and update only an aspect-preserving viewport transform.
+- [x] Cache completed visible ink while retaining its vector strokes so active
+  drawing cost does not grow with the completed point count.
+- [ ] Cancel pending recognition work on capture invalidation and require a
+  subsequent clean pointer interaction before recognizing preserved strokes.
+- [x] Smooth visible traces with quadratic or equivalent interpolated curves.
+- [x] Derive a restrained visible line-width response from filtered velocity.
+- [x] Handle device-pixel ratio without changing logical stroke coordinates.
+- [x] Detect device-pixel-ratio-only changes and rebuild the visible and
+  completed-ink backing stores.
 - [ ] Verify iOS gesture suppression on a physical device.
 
 ### Recognition Raster
 
-- [ ] Compute a bounding box over all current stroke points.
-- [ ] Reject empty and trivially small accidental input before inference.
-- [ ] Add proportional padding around the ink.
-- [ ] Preserve the complete drawing's aspect ratio.
-- [ ] Fit the drawing inside approximately `120x26` model pixels.
-- [ ] Center it on a black `128x32` raster.
-- [ ] Render white strokes with fixed model width, round caps, and round joins.
-- [ ] Convert pixels to row-major NCHW `Float32Array` in the range `0.0-1.0`.
-- [ ] Expose the exact model raster in diagnostic mode.
-- [ ] Freeze versioned preprocessing parameters for padding, tiny-input cutoff,
+Use the versioned software coverage-mask rasterizer for recognition input. Its
+fixed subpixel sampling avoids browser-specific Canvas antialiasing while visible
+ink remains a separate Canvas 2D concern.
+
+- [x] Compute a bounding box over all current stroke points.
+- [x] Reject empty and trivially small accidental input before inference.
+- [x] Add proportional padding around the ink.
+- [x] Preserve the complete drawing's aspect ratio.
+- [x] Fit the drawing inside approximately `120x26` model pixels.
+- [x] Center it on a black `128x32` raster.
+- [x] Render white strokes with fixed model width, round caps, and round joins.
+- [x] Convert pixels to row-major NCHW `Float32Array` in the range `0.0-1.0`.
+- [x] Expose the exact model raster in diagnostic mode.
+- [x] Freeze versioned preprocessing parameters for padding, tiny-input cutoff,
   stroke width, resampling, and rounding before confidence calibration.
 
 ### Inference And Decoding
@@ -351,7 +361,7 @@ parameter and must not alter recognition behavior.
 
 - [ ] Display model readiness and initialization errors.
 - [ ] Display raw stroke and point counts.
-- [ ] Display the normalized `32x128` input raster enlarged with nearest-neighbor
+- [x] Display the normalized `32x128` input raster enlarged with nearest-neighbor
   scaling.
 - [ ] Display predicted text, confidence, alternatives, and inference time.
 - [ ] Display raw sequence scores, top-versus-second margin, and separate
@@ -410,11 +420,11 @@ ml/digits/
 
 ### Scaffold
 
-- [ ] Create the Vite React TypeScript project in `web-client/`.
-- [ ] Add formatting, linting, Vitest, and production build scripts.
-- [ ] Pin the supported Node version and package-manager behavior.
-- [ ] Add web artifacts to `.gitignore`.
-- [ ] Add a dedicated web CI job without changing native release behavior.
+- [x] Create the Vite React TypeScript project in `web-client/`.
+- [x] Add formatting, linting, Vitest, and production build scripts.
+- [x] Pin the supported Node version and package-manager behavior.
+- [x] Add web artifacts to `.gitignore`.
+- [x] Add a dedicated web CI job without changing native release behavior.
 - [ ] Do not change native release-versioning policy while the proof remains
   unmerged; revisit release isolation before product integration.
 
@@ -438,8 +448,8 @@ ml/digits/
 
 ### Web Integration
 
-- [ ] Implement stroke capture and visible rendering.
-- [ ] Implement deterministic rasterization with snapshot fixtures.
+- [x] Implement stroke capture and visible rendering.
+- [x] Implement deterministic software rasterization with invariant-based tests.
 - [ ] Add ONNX Runtime WASM assets and the inference worker.
 - [ ] Implement CTC decoding and confidence diagnostics.
 - [ ] Implement finish detection and the interaction reducer.
@@ -452,10 +462,9 @@ ml/digits/
 - [ ] Unit-test CTC collapse, repeated digits, and blank handling.
 - [ ] Unit-test prefix-beam path merging, score ordering, margin calculation, and
   the selected confidence formula.
-- [ ] Unit-test bounding-box, padding, scaling, and pixel polarity.
-- [ ] Test raster geometry and tensor conversion as pure functions; use explicit
-  tolerances for browser Canvas antialiasing checks rather than portable
-  pixel-perfect snapshots.
+- [x] Unit-test bounding-box, padding, scaling, and pixel polarity.
+- [x] Test raster geometry, deterministic coverage, and tensor conversion as pure
+  functions without browser-dependent Canvas antialias snapshots.
 - [ ] Unit-test state transitions with fake timers and stale inference responses.
 - [ ] Unit-test pointer cancellation, recognizer failure, and delayed-prefix
   transitions.

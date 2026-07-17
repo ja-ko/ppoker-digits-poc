@@ -23,10 +23,10 @@ import {
 } from "./recognition-flow";
 import type { FlowDiagnostics, RecognitionRuntime } from "./recognition-flow";
 import {
-  DEFAULT_CONFIDENCE_THRESHOLD,
   DEFAULT_NUMERIC_DECK,
   initialRecognizerStatus,
   initialVoteInputState,
+  POC_BROWSER_DEFAULT_CONFIDENCE_THRESHOLD,
   rejectionAnimation,
   recognizerReducer,
   voteInputReducer,
@@ -90,7 +90,7 @@ const initialBenchmarkState: BenchmarkViewState = {
 class RecognitionPadStore {
   input: VoteInputState = initialVoteInputState;
   recognizer: RecognizerStatus = initialRecognizerStatus;
-  threshold = DEFAULT_CONFIDENCE_THRESHOLD;
+  threshold = POC_BROWSER_DEFAULT_CONFIDENCE_THRESHOLD;
   numericDeck: readonly number[] = DEFAULT_NUMERIC_DECK;
   ink: InkPadHandle | null = null;
   flowDiagnostics: FlowDiagnostics = initialFlowDiagnostics;

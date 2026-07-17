@@ -2,7 +2,8 @@ import { canonicalValue } from "../recognition/types";
 import type { Recognition, RecognizerStatus } from "../recognition/types";
 
 export const DEFAULT_NUMERIC_DECK = Object.freeze([1, 2, 3, 5, 8, 13]);
-export const DEFAULT_CONFIDENCE_THRESHOLD = 0.9990089291427978;
+// Explicit POC usability default, not a production-safe confidence threshold.
+export const POC_BROWSER_DEFAULT_CONFIDENCE_THRESHOLD = 0.95;
 
 export type VoteInputStatus =
   | "empty"

@@ -235,7 +235,7 @@ export function Diagnostics({
         </div>
 
         <label className="diagnostics-control">
-          <span>Confidence threshold</span>
+          <span>POC browser confidence threshold</span>
           <input
             type="number"
             min="0"

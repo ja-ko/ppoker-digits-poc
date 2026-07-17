@@ -5,6 +5,7 @@ import {
   classifyRecognition,
   initialRecognizerStatus,
   initialVoteInputState,
+  POC_BROWSER_DEFAULT_CONFIDENCE_THRESHOLD,
   rejectionAnimation,
   recognizerReducer,
   voteInputReducer,
@@ -229,4 +230,8 @@ describe("recognition disposition", () => {
       ).toEqual(expected);
     },
   );
+
+  it("uses one explicit POC usability threshold", () => {
+    expect(POC_BROWSER_DEFAULT_CONFIDENCE_THRESHOLD).toBe(0.95);
+  });
 });

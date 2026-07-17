@@ -1,0 +1,15 @@
+:root {
+  font-family: "Liberation Sans", sans-serif !important;
+}
+
+.ink-header h1,
+.committed-result output {
+  font-family: "Liberation Serif", serif !important;
+}
+
+.identity,
+.range-label,
+.mock-deck span,
+.stroke-status {
+  font-family: "Liberation Mono", monospace !important;
+}

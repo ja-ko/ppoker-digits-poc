@@ -35,21 +35,11 @@ jobs:
         run: npm install --global npm@12.0.0
       - name: Install dependencies
         run: npm ci
+      - name: Install pinned Playwright Chromium headless shell and dependencies
+        run: npx playwright install --with-deps --only-shell chromium
       - name: Check POC launcher syntax
         run: bash -n ../scripts/serve-handwriting-poc.sh
-      - name: Check formatting
-        run: npm run format:check
-      - name: Lint
-        run: npm run lint
-      - name: Test
-        run: npm test
-      - name: Build
-        run: npm run build
-      - name: Smoke-test production server
-        run: npm run test:server
-      - name: Smoke-test root POC launcher
-        run: npm run test:launcher
-      - name: Test benchmark failure and signal cleanup
-        run: npm run test:benchmark-cleanup
+      - name: Run full web verification including Chromium E2E
+        run: npm run verify:full
         env:
           CHROME_BIN: google-chrome

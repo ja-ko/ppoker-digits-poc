@@ -110,6 +110,8 @@ These values are tuning defaults, not protocol guarantees.
 - [x] Download the upstream checkpoint and EMNIST data with verified checksums;
   do not commit them.
 - [x] Use Vitest for deterministic TypeScript unit tests.
+- [x] Use Playwright with pinned Chromium for repeatable production-build browser
+  interaction and visual checks.
 - [x] Use `uv` for reproducible Python model tooling.
 - [x] Record supported Node and Python versions alongside their lockfiles.
 - [x] Do not add Rust/WASM or restructure the existing Rust package in this proof.
@@ -481,6 +483,17 @@ ml/digits/
   transitions.
 - [x] Verify production Vite asset paths for model, worker, `.mjs`, and `.wasm`.
 - [x] Test desktop mouse input.
+- [x] Run committed Chromium E2E against the production preview with real
+  Pointer Events, the real worker, and the checked-in model for every numeric
+  mock-deck card.
+- [x] Automate prefix cancellation, commit/rejection interruption, clear/reuse,
+  resize/orientation/DPR, diagnostics, reduced motion, keyboard focus, narrow
+  layout, and recoverable model-load failure checks.
+- [x] Commit a deterministic browser confidence-policy corpus with exact model
+  observations, default-card positives, invalid marks, and tight, repeated, and
+  overlapping cases; keep its physical/OOD limitations explicit.
+- [x] Commit focused Linux Chromium visual baselines for the empty portrait
+  surface and a stable committed result.
 - [x] Provide a production-build URL and qualitative physical-device smoke-test
   checklist to the product owner.
 - [x] Provide one root command that installs the locked web dependencies when
@@ -495,6 +508,9 @@ ml/digits/
   separately.
 - [x] Make the same benchmark available to the product owner during device smoke
   testing without making a numeric result part of the qualitative device gate.
+
+The desktop automation above is regression evidence, not a physical-device or
+recognizer-accuracy gate. All physical browser gates below remain owner work.
 
 ## Acceptance Gates
 

@@ -10,6 +10,25 @@ exports, or handwriting samples. Record only device/browser details, entered
 numeric values, observed behavior, timing impressions, and text descriptions of
 failures.
 
+## Automated Desktop Coverage
+
+The committed Linux Chromium Playwright slice now provides repeatable desktop
+regression checks without changing the physical acceptance status:
+
+- [x] Production root, worker/model readiness, and real-model commits for every
+  numeric default-deck value through pointer input.
+- [x] Prefix timing and cancellation, edge interruption, clear/reuse, keyboard
+  focus, reduced motion, resize/orientation/DPR, and narrow/landscape layout.
+- [x] Diagnostics disclosure and benchmark cancellation, threshold/deck guards,
+  recoverable model-load failure, and two focused visual baselines.
+- [x] Deterministic confidence-policy corpus for default cards, invalid marks,
+  repeated/tight/overlapping evidence, and valid landscape/multi-stroke
+  variants. Known false accepts remain documented rather than hidden by a
+  fixture-specific guard.
+
+These generated templates are not user handwriting and do not establish
+physical-device recognition quality. All owner checks below remain pending.
+
 Repeat the checklist once per device/browser:
 
 - [ ] Record device model, OS version, browser/version, and whether the URL is

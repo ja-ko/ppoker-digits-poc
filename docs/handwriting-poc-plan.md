@@ -10,6 +10,19 @@ and does not establish that automatic confidence decisions are production-safe.
 The final product plan is maintained in
 [mobile-client-product-plan.md](mobile-client-product-plan.md).
 
+**Implementation status: the POC implementation and local automated verification
+are complete, and it is ready for owner device test.** CI configuration is
+implemented, and all equivalent commands pass locally; remote CI has not run for
+this unpushed hash. Physical iPhone Safari and Android Chrome checks, the
+product-owner qualitative gate, and the final recognizer exit decision remain
+open; use and record them in the
+[physical smoke-test checklist](handwriting-poc-smoke-test.md#pending-owner-result).
+
+The browser deliberately uses a `0.95` POC usability threshold. As documented in
+the [browser evidence](handwriting-poc-browser-evidence.md), a wide zigzag can be
+falsely accepted as `3` and an overlapping `13` as `8`. This tradeoff does not
+establish production confidence or out-of-distribution safety.
+
 Checklist convention:
 
 - `[x]` means the requirement or decision is settled.
@@ -200,7 +213,7 @@ collected from users.
 - [x] Save the checkpoint with the best model-selection exact-match accuracy.
 - [x] Report exact-match accuracy by sequence length and for repeated digits.
 - [x] Measure local CPU training throughput before changing batch or epoch counts.
-- [ ] Tune augmentation only in response to documented model-selection failures.
+- [x] Tune augmentation only in response to documented model-selection failures.
 - [ ] Freeze all composition manifests before using the calibration or final-test
   results.
 - [x] Treat the final-test result as a report, not a tuning input. Any later model

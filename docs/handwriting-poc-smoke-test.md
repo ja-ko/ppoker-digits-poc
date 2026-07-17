@@ -66,6 +66,11 @@ Repeat the checklist once per device/browser:
 
 ## Pending Owner Result
 
+Record the completed owner result directly in this section. Include test date,
+device/OS/browser versions, whether plain LAN HTTP was used, qualitative notes,
+failing numeric examples, and the final accept/reject decision. Do not add ink,
+rasters, screenshots, recordings, or other handwriting data.
+
 - [ ] iPhone Safari checklist completed without retained ink.
 - [ ] Android Chrome checklist completed without retained ink.
 - [ ] Product owner records the qualitative gate result and concrete failure
@@ -73,3 +78,12 @@ Repeat the checklist once per device/browser:
 - [ ] Product owner accepts or rejects continued use of this recognizer. This
   decision does not approve the provisional confidence rule for production or
   establish out-of-distribution safety.
+
+Owner result: **Pending**
+
+- Test date: Pending
+- iPhone device, OS, Safari, and result: Pending
+- Android device, OS, Chrome, and result: Pending
+- Qualitative interaction notes and failing numeric examples: Pending
+- Recognizer decision and failure categories, if rejected: Pending
+- Production confidence/OOD safety: Not evaluated by this POC

@@ -46,10 +46,14 @@ remains after this remediation iteration.
 
 ## Reproduce the selected run
 
-Run these in order. Calibration is not run until training/model selection is
-finished; final test is not run until the confidence choice is frozen.
+Run these in order. The first command bootstraps the ignored upstream checkpoint
+and EMNIST files under `artifacts/`, verifying their published and extracted
+checksums before exposing them to training. Calibration is not run until
+training/model selection is finished; final test is not run until the confidence
+choice is frozen.
 
 ```sh
+uv run python download.py all
 uv run python train.py benchmark --steps 20
 uv run python train.py fit --epochs 10 --samples-per-epoch 100000
 uv run python evaluate.py artifacts/runs/best.pth calibration --confidence \

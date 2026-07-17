@@ -18,9 +18,13 @@ for command_name in node npm; do
 done
 
 node -e '
-  const [major, minor] = process.versions.node.split(".").map(Number);
-  if (major < 22 || major >= 27 || (major === 22 && minor < 18)) {
-    console.error(`Node ${process.versions.node} is unsupported; use Node >=22.18.0 <27`);
+  const [major, minor, patch] = process.versions.node.split(".").map(Number);
+  const supported =
+    (major === 22 && (minor > 22 || (minor === 22 && patch >= 2))) ||
+    (major === 24 && minor >= 15) ||
+    major === 26;
+  if (!supported) {
+    console.error(`Node ${process.versions.node} is unsupported; use Node ^22.22.2 || ^24.15.0 || >=26.0.0 <27`);
     process.exit(1);
   }
 '

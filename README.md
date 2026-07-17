@@ -25,8 +25,8 @@ No handwriting is uploaded or retained.
 
 ## Run the POC
 
-Prerequisites are Node `>=22.18.0 <27`, npm `12.0.x`, and a current browser with
-JavaScript, Web Workers, and WebAssembly enabled.
+Prerequisites are Node `^22.22.2 || ^24.15.0 || >=26.0.0 <27`, npm `12.0.x`, and
+a current browser with JavaScript, Web Workers, and WebAssembly enabled.
 
 ```shell
 ./scripts/serve-handwriting-poc.sh
@@ -129,4 +129,3 @@ The production web build includes the project, model, runtime, and dependency
 license texts under `legal/`; its authoritative notice is
 [`web-client/legal/THIRD_PARTY_NOTICES.txt`](web-client/legal/THIRD_PARTY_NOTICES.txt).
 EMNIST data and the upstream initialization checkpoint are not redistributed.
-

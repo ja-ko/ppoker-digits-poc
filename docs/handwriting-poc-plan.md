@@ -226,7 +226,7 @@ independently proven and the corresponding process items remain unchecked.
   and update only an aspect-preserving viewport transform.
 - [x] Cache completed visible ink while retaining its vector strokes so active
   drawing cost does not grow with the completed point count.
-- [ ] Cancel pending recognition work on capture invalidation and require a
+- [x] Cancel pending recognition work on capture invalidation and require a
   subsequent clean pointer interaction before recognizing preserved strokes.
 - [x] Smooth visible traces with quadratic or equivalent interpolated curves.
 - [x] Derive a restrained visible line-width response from filtered velocity.
@@ -256,7 +256,7 @@ ink remains a separate Canvas 2D concern.
 ### Inference And Decoding
 
 - [x] Load ONNX Runtime and the model once in a worker.
-- [ ] Surface loading progress and initialization failures to the page.
+- [x] Surface loading progress and initialization failures to the page.
 - [x] Transfer tensors rather than copying large canvas state unnecessarily.
 - [x] Run the batch-one ONNX session through the WASM execution provider.
 - [x] Implement CTC greedy decoding as a correctness baseline.
@@ -298,9 +298,9 @@ type Recognition = {
 - [ ] Document and freeze the selected confidence formula before evaluating the
   untouched synthetic final-test pool.
 - [x] Select the initial automatic-action threshold against the calibration pool.
-- [ ] Display raw scores, top alternatives, margin, formula inputs, and threshold
+- [x] Display raw scores, top alternatives, margin, formula inputs, and threshold
   result in diagnostics.
-- [ ] Let the product owner tune the threshold temporarily during qualitative
+- [x] Let the product owner tune the threshold temporarily during qualitative
   device testing without retaining handwriting or changing recorded final-test
   metrics.
 - [ ] Prefer false rejection over a wrong automatic commit.
@@ -310,10 +310,10 @@ type Recognition = {
 ### Recognizer Failure Handling
 
 - [x] Track recognizer readiness separately as `loading`, `ready`, or `failed`.
-- [ ] Disable drawing until the recognizer is ready.
-- [ ] Surface initialization and worker failures with a retry control.
+- [x] Disable drawing until the recognizer is ready.
+- [x] Surface initialization and worker failures with a retry control.
 - [x] Time out hung inference without committing or rejecting the input.
-- [ ] Preserve ink after an inference failure so retry or additional input is
+- [x] Preserve ink after an inference failure so retry or additional input is
   possible.
 
 ## Interaction State Machine
@@ -333,56 +333,56 @@ Vote input, enabled only while the recognizer is ready
   committed -> clearing -> empty
 ```
 
-- [ ] Represent transitions as explicit reducer events.
-- [ ] Keep at most one pending inference/action timer for the current drawing
+- [x] Represent transitions as explicit reducer events.
+- [x] Keep at most one pending inference/action timer for the current drawing
   revision, replacing it when classification selects an extended deadline.
-- [ ] Increment the drawing revision immediately on each accepted `pointerdown`
+- [x] Increment the drawing revision immediately on each accepted `pointerdown`
   and on clear.
-- [ ] Cancel deadlines when drawing resumes.
-- [ ] Prevent model completion from committing an old revision.
-- [ ] Schedule initial inference after the base quiet period from the last point.
-- [ ] Commit a valid non-prefix result when current inference completes.
-- [ ] Delay an exact card that is also a longer-card prefix until its extended
+- [x] Cancel deadlines when drawing resumes.
+- [x] Prevent model completion from committing an old revision.
+- [x] Schedule initial inference after the base quiet period from the last point.
+- [x] Commit a valid non-prefix result when current inference completes.
+- [x] Delay an exact card that is also a longer-card prefix until its extended
   deadline, then commit it if the revision is still current.
-- [ ] Delay a proper-prefix-only result until its extended deadline, then fade it
+- [x] Delay a proper-prefix-only result until its extended deadline, then fade it
   as incomplete input without a shake.
-- [ ] Apply invalid and low-confidence effects at their extended deadline; if
+- [x] Apply invalid and low-confidence effects at their extended deadline; if
   inference finishes after a deadline, act immediately only when its revision is
   still current.
-- [ ] Restore the complete vector trace when drawing cancels a settling, commit,
+- [x] Restore the complete vector trace when drawing cancels a settling, commit,
   or rejection animation.
-- [ ] Prevent drawing while the committed state is visible.
+- [x] Prevent drawing while the committed state is visible.
 
 ## Animation Plan
 
-- [ ] Keep the original vector trace until its transition completes.
+- [x] Keep the original vector trace until its transition completes.
 - [ ] On commit, subtly tighten or scale the trace toward the result's center.
 - [ ] Crossfade the trace into a clean typeset number.
 - [ ] Add a restrained landing scale/easing to the typeset result.
 - [ ] On invalid input, shake the trace horizontally and then fade it.
 - [ ] On low confidence, fade or disperse without a shake.
-- [ ] On clear, remove the committed number and restore the drawing surface.
-- [ ] Ensure animations cannot complete against a newer drawing revision.
-- [ ] Provide a reduced-motion variant.
+- [x] On clear, remove the committed number and restore the drawing surface.
+- [x] Ensure animations cannot complete against a newer drawing revision.
+- [x] Provide a reduced-motion variant.
 
 ## Diagnostics
 
 Diagnostic mode should be available through a development control or query
 parameter and must not alter recognition behavior.
 
-- [ ] Display model readiness and initialization errors.
-- [ ] Display raw stroke and point counts.
+- [x] Display model readiness and initialization errors.
+- [x] Display raw stroke and point counts.
 - [x] Display the normalized `32x128` input raster enlarged with nearest-neighbor
   scaling.
-- [ ] Display predicted text, confidence, alternatives, and inference time.
-- [ ] Display raw sequence scores, top-versus-second margin, and separate
+- [x] Display predicted text, confidence, alternatives, and inference time.
+- [x] Display raw sequence scores, top-versus-second margin, and separate
   rasterization, worker round-trip, and model timings.
-- [ ] Display current interaction state, drawing revision, and timer reason.
-- [ ] Allow the mock numeric deck and confidence threshold to be adjusted in
+- [x] Display current interaction state, drawing revision, and timer reason.
+- [x] Allow the mock numeric deck and confidence threshold to be adjusted in
   diagnostics.
-- [ ] Reject noncanonical diagnostic deck entries and numeric entries outside
+- [x] Reject noncanonical diagnostic deck entries and numeric entries outside
   `0-255`; ignore duplicate entries for prefix matching.
-- [ ] Provide a repeatable warm-inference benchmark control.
+- [x] Provide a repeatable warm-inference benchmark control.
 
 ## Proposed Project Layout
 
@@ -463,10 +463,10 @@ ml/digits/
 - [x] Implement deterministic software rasterization with invariant-based tests.
 - [x] Add ONNX Runtime WASM assets and the inference worker.
 - [x] Implement CTC decoding and confidence diagnostics.
-- [ ] Implement finish detection and the interaction reducer.
+- [x] Implement finish detection and the interaction reducer.
 - [x] Implement recognizer retry, crash, and timeout handling.
 - [ ] Implement commit, rejection, and clear animations.
-- [ ] Add the mock deck and diagnostic controls.
+- [x] Add the mock deck and diagnostic controls.
 
 ### Verification
 
@@ -476,11 +476,11 @@ ml/digits/
 - [x] Unit-test bounding-box, padding, scaling, and pixel polarity.
 - [x] Test raster geometry, deterministic coverage, and tensor conversion as pure
   functions without browser-dependent Canvas antialias snapshots.
-- [ ] Unit-test state transitions with fake timers and stale inference responses.
-- [ ] Unit-test pointer cancellation, recognizer failure, and delayed-prefix
+- [x] Unit-test state transitions with fake timers and stale inference responses.
+- [x] Unit-test pointer cancellation, recognizer failure, and delayed-prefix
   transitions.
 - [x] Verify production Vite asset paths for model, worker, `.mjs`, and `.wasm`.
-- [ ] Test desktop mouse input.
+- [x] Test desktop mouse input.
 - [ ] Provide a production-build URL and qualitative physical-device smoke-test
   checklist to the product owner.
 - [ ] Product owner tests physical iPhone Safari input and lifecycle.

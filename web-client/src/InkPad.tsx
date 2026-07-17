@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+} from "react";
 
 import {
   appendOrderedPoints,
@@ -13,7 +19,8 @@ import type {
   PointerOrigin,
   UniformTransform,
 } from "./ink/capture";
-import { PREPROCESSING_CONFIG, rasterizeInk } from "./ink/rasterize";
+import { rasterizeInk } from "./ink/rasterize";
+import type { RasterizedInk } from "./ink/rasterize";
 import {
   clearInk,
   drawInk,
@@ -23,51 +30,141 @@ import {
   watchDevicePixelRatio,
 } from "./ink/render";
 import type { CanvasMetrics, VisibleInkStyle } from "./ink/render";
-import type { InkStroke } from "./ink/types";
+import type { ImmutableInkStroke, InkStroke } from "./ink/types";
 
 interface ActiveStroke {
   pointerId: number;
   stroke: InkStroke;
 }
 
-function paintPreview(
-  canvas: HTMLCanvasElement,
-  data: Float32Array | null,
-): void {
-  const { width, height } = PREPROCESSING_CONFIG;
-  if (canvas.width !== width) {
-    canvas.width = width;
-  }
-  if (canvas.height !== height) {
-    canvas.height = height;
-  }
-
-  const context = canvas.getContext("2d");
-  if (!context) {
-    return;
-  }
-  const pixels = context.createImageData(width, height);
-  for (let index = 0; index < width * height; index += 1) {
-    const value = Math.round((data?.[index] ?? 0) * 255);
-    const pixelIndex = index * 4;
-    pixels.data[pixelIndex] = value;
-    pixels.data[pixelIndex + 1] = value;
-    pixels.data[pixelIndex + 2] = value;
-    pixels.data[pixelIndex + 3] = 255;
-  }
-  context.putImageData(pixels, 0, 0);
+export interface InkStats {
+  strokeCount: number;
+  pointCount: number;
 }
 
-export function InkPad() {
+export type StrokeCancellationReason =
+  "pointercancel" | "lost-capture" | "resize" | "orientation" | "disabled";
+
+export interface InkPadHandle {
+  isPointerActive(): boolean;
+  getLatestPointTime(): number | null;
+  getStats(): InkStats;
+  getStrokes(): readonly ImmutableInkStroke[];
+  rasterize(): RasterizedInk | null;
+  clear(): void;
+}
+
+export interface InkPadProps {
+  enabled?: boolean;
+  className?: string;
+  onPointerAccepted?: () => void;
+  onActivePointerChange?: (active: boolean) => void;
+  onStrokeComplete?: (stats: InkStats) => void;
+  onStrokeCancel?: (reason: StrokeCancellationReason, stats: InkStats) => void;
+  onClear?: () => void;
+}
+
+function inkStats(strokes: readonly InkStroke[]): InkStats {
+  return {
+    strokeCount: strokes.length,
+    pointCount: strokes.reduce(
+      (count, stroke) => count + stroke.points.length,
+      0,
+    ),
+  };
+}
+
+function immutableStrokeSnapshot(
+  strokes: readonly InkStroke[],
+): readonly ImmutableInkStroke[] {
+  return Object.freeze(
+    strokes.map((stroke) =>
+      Object.freeze({
+        points: Object.freeze(
+          stroke.points.map((point) => Object.freeze({ ...point })),
+        ),
+      }),
+    ),
+  );
+}
+
+function latestCompletedPointTime(
+  strokes: readonly InkStroke[],
+): number | null {
+  let latest: number | null = null;
+  for (const stroke of strokes) {
+    for (const point of stroke.points) {
+      latest = latest === null ? point.time : Math.max(latest, point.time);
+    }
+  }
+  return latest;
+}
+
+export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
+  {
+    enabled = true,
+    className = "",
+    onPointerAccepted,
+    onActivePointerChange,
+    onStrokeComplete,
+    onStrokeCancel,
+    onClear,
+  },
+  ref,
+) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const previewRef = useRef<HTMLCanvasElement>(null);
   const completedStrokesRef = useRef<InkStroke[]>([]);
   const activeStrokeRef = useRef<ActiveStroke | null>(null);
+  const latestPointTimeRef = useRef<number | null>(null);
   const clearRef = useRef<() => void>(() => undefined);
-  const [strokeCount, setStrokeCount] = useState(0);
-  const showPreview =
-    import.meta.env.DEV ||
-    new URLSearchParams(window.location.search).get("preview") === "1";
+  const cancelRef = useRef<
+    (reason: StrokeCancellationReason, notify?: boolean) => void
+  >(() => undefined);
+  const propsRef = useRef({
+    enabled,
+    onPointerAccepted,
+    onActivePointerChange,
+    onStrokeComplete,
+    onStrokeCancel,
+    onClear,
+  });
+
+  useLayoutEffect(() => {
+    propsRef.current = {
+      enabled,
+      onPointerAccepted,
+      onActivePointerChange,
+      onStrokeComplete,
+      onStrokeCancel,
+      onClear,
+    };
+  }, [
+    enabled,
+    onPointerAccepted,
+    onActivePointerChange,
+    onStrokeComplete,
+    onStrokeCancel,
+    onClear,
+  ]);
+
+  useLayoutEffect(() => {
+    if (!enabled) {
+      cancelRef.current("disabled");
+    }
+  }, [enabled]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      isPointerActive: () => activeStrokeRef.current !== null,
+      getLatestPointTime: () => latestPointTimeRef.current,
+      getStats: () => inkStats(completedStrokesRef.current),
+      getStrokes: () => immutableStrokeSnapshot(completedStrokesRef.current),
+      rasterize: () => rasterizeInk(completedStrokesRef.current),
+      clear: () => clearRef.current(),
+    }),
+    [],
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -156,32 +253,38 @@ export function InkPad() {
       }
     };
 
-    const refreshPreview = () => {
-      if (!previewRef.current) {
-        return;
-      }
-      const raster = rasterizeInk(completedStrokesRef.current);
-      paintPreview(previewRef.current, raster?.data ?? null);
-    };
-
     const releaseCapture = (pointerId: number) => {
       if (canvas.hasPointerCapture(pointerId)) {
         canvas.releasePointerCapture(pointerId);
       }
     };
 
-    const cancelActiveStroke = () => {
+    const cancelActiveStroke = (
+      reason: StrokeCancellationReason,
+      notify = true,
+    ) => {
       const active = activeStrokeRef.current;
       if (!active) {
         return;
       }
       activeStrokeRef.current = null;
       releaseCapture(active.pointerId);
+      latestPointTimeRef.current = latestCompletedPointTime(
+        completedStrokesRef.current,
+      );
+      propsRef.current.onActivePointerChange?.(false);
+      if (notify) {
+        propsRef.current.onStrokeCancel?.(
+          reason,
+          inkStats(completedStrokesRef.current),
+        );
+      }
       requestPaint();
     };
+    cancelRef.current = cancelActiveStroke;
 
     const resizeSurface = () => {
-      cancelActiveStroke();
+      cancelActiveStroke("resize");
       const bounds = canvas.getBoundingClientRect();
       if (bounds.width <= 0 || bounds.height <= 0) {
         return;
@@ -215,8 +318,18 @@ export function InkPad() {
         : points;
     };
 
+    const appendCapturedPoints = (stroke: InkStroke, event: PointerEvent) => {
+      const points = capturedPoints(event);
+      appendOrderedPoints(stroke.points, points);
+      const latest = stroke.points.at(-1)?.time;
+      if (latest !== undefined) {
+        latestPointTimeRef.current = latest;
+      }
+    };
+
     const onPointerDown = (event: PointerEvent) => {
       if (
+        !propsRef.current.enabled ||
         !isPrimaryPointerStart(
           event,
           activeStrokeRef.current?.pointerId ?? null,
@@ -231,9 +344,11 @@ export function InkPad() {
         resizeSurface();
       }
       event.preventDefault();
+      propsRef.current.onPointerAccepted?.();
       const stroke: InkStroke = { points: [] };
-      appendOrderedPoints(stroke.points, capturedPoints(event));
+      appendCapturedPoints(stroke, event);
       activeStrokeRef.current = { pointerId: event.pointerId, stroke };
+      propsRef.current.onActivePointerChange?.(true);
       canvas.setPointerCapture(event.pointerId);
       requestPaint();
     };
@@ -245,7 +360,7 @@ export function InkPad() {
       }
 
       event.preventDefault();
-      appendOrderedPoints(active.stroke.points, capturedPoints(event));
+      appendCapturedPoints(active.stroke, event);
       requestPaint();
     };
 
@@ -256,32 +371,34 @@ export function InkPad() {
       }
 
       event.preventDefault();
-      appendOrderedPoints(active.stroke.points, capturedPoints(event));
+      appendCapturedPoints(active.stroke, event);
       activeStrokeRef.current = null;
       completedStrokesRef.current.push(active.stroke);
       releaseCapture(event.pointerId);
       appendCompletedInk(active.stroke);
-      setStrokeCount(completedStrokesRef.current.length);
-      refreshPreview();
+      propsRef.current.onActivePointerChange?.(false);
+      propsRef.current.onStrokeComplete?.(
+        inkStats(completedStrokesRef.current),
+      );
       requestPaint();
     };
 
     const onPointerCancel = (event: PointerEvent) => {
       if (activeStrokeRef.current?.pointerId === event.pointerId) {
         event.preventDefault();
-        cancelActiveStroke();
+        cancelActiveStroke("pointercancel");
       }
     };
 
     const onLostPointerCapture = (event: PointerEvent) => {
       if (activeStrokeRef.current?.pointerId === event.pointerId) {
-        cancelActiveStroke();
+        cancelActiveStroke("lost-capture");
       }
     };
 
     const suppressDefault = (event: Event) => event.preventDefault();
     const onOrientationChange = () => {
-      cancelActiveStroke();
+      cancelActiveStroke("orientation");
       if (orientationFrame !== null) {
         window.cancelAnimationFrame(orientationFrame);
       }
@@ -292,8 +409,9 @@ export function InkPad() {
     };
 
     clearRef.current = () => {
-      cancelActiveStroke();
+      cancelActiveStroke("disabled", false);
       completedStrokesRef.current.length = 0;
+      latestPointTimeRef.current = null;
       if (metrics) {
         canonicalSurface = {
           width: metrics.logicalWidth,
@@ -302,8 +420,7 @@ export function InkPad() {
         viewportTransform = resizeTransform(canonicalSurface, canonicalSurface);
       }
       rebuildCompletedInk();
-      setStrokeCount(0);
-      refreshPreview();
+      propsRef.current.onClear?.();
       requestPaint();
     };
 
@@ -325,10 +442,10 @@ export function InkPad() {
       resizeSurface,
     );
     resizeSurface();
-    refreshPreview();
 
     return () => {
       clearRef.current = () => undefined;
+      cancelRef.current = () => undefined;
       if (animationFrame !== null) {
         window.cancelAnimationFrame(animationFrame);
       }
@@ -351,61 +468,12 @@ export function InkPad() {
   }, []);
 
   return (
-    <main className="ink-shell">
-      <div className="atmosphere" aria-hidden="true" />
-      <div className="writing-guide" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </div>
-
-      <canvas
-        ref={canvasRef}
-        className="ink-canvas"
-        aria-label="Handwriting surface. Write a number from zero through 255."
-        aria-describedby="ink-instructions"
-      />
-
-      <header className="ink-header">
-        <div className="identity">
-          <span className="identity-mark" aria-hidden="true" />
-          <span>ppoker / ink study</span>
-        </div>
-        <div className="range-label">canonical 0-255</div>
-        <h1>Write a number.</h1>
-        <p id="ink-instructions">
-          Use one continuous thought. Add another stroke whenever you need it.
-        </p>
-      </header>
-
-      {showPreview && (
-        <aside
-          className="raster-preview"
-          aria-label="Recognition raster preview"
-        >
-          <div>
-            <span>model input</span>
-            <code>{PREPROCESSING_CONFIG.version}</code>
-          </div>
-          <canvas
-            ref={previewRef}
-            role="img"
-            aria-label="The exact 128 by 32 recognition raster"
-          />
-        </aside>
-      )}
-
-      <footer className="ink-toolbar">
-        <p className="stroke-status" aria-live="polite">
-          <span aria-hidden="true" />
-          {strokeCount === 0
-            ? "Surface ready"
-            : `${strokeCount} ${strokeCount === 1 ? "stroke" : "strokes"}`}
-        </p>
-        <button type="button" onClick={() => clearRef.current()}>
-          <span>Clear surface</span>
-        </button>
-      </footer>
-    </main>
+    <canvas
+      ref={canvasRef}
+      className={`ink-canvas ${className}`.trim()}
+      aria-label="Handwriting surface. Write a number from zero through 255."
+      aria-describedby="ink-instructions"
+      aria-disabled={!enabled}
+    />
   );
-}
+});

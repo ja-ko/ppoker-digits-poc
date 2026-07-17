@@ -12,6 +12,10 @@ export interface InkStroke {
   points: InkPoint[];
 }
 
+export interface ImmutableInkStroke {
+  readonly points: readonly Readonly<InkPoint>[];
+}
+
 export interface Bounds {
   minX: number;
   minY: number;

@@ -1,5 +1,5 @@
-import { InkPad } from "./InkPad";
+import { RecognitionPad } from "./poc/RecognitionPad";
 
 export function App() {
-  return <InkPad />;
+  return <RecognitionPad />;
 }

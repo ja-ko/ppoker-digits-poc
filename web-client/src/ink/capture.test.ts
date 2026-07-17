@@ -32,6 +32,9 @@ describe("pointer capture utilities", () => {
   it("accepts one primary pointer and only the primary button", () => {
     expect(isPrimaryPointerStart(pointerEvent(), null)).toBe(true);
     expect(
+      isPrimaryPointerStart(pointerEvent({ pointerType: "mouse" }), null),
+    ).toBe(true);
+    expect(
       isPrimaryPointerStart(pointerEvent({ isPrimary: false }), null),
     ).toBe(false);
     expect(isPrimaryPointerStart(pointerEvent({ button: 2 }), null)).toBe(

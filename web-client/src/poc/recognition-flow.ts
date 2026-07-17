@@ -1,0 +1,513 @@
+import type { InkPadHandle } from "../InkPad";
+import type { RasterizedInk } from "../ink/rasterize";
+import { MODEL_INPUT_SHAPE } from "../recognition/types";
+import type {
+  Recognition,
+  RecognitionInput,
+  RecognizerStatus,
+} from "../recognition/types";
+import {
+  classifyRecognition,
+  type RejectionKind,
+  type VoteInputEvent,
+  type VoteInputState,
+} from "./recognition-state";
+
+export const BASE_QUIET_MS = 675;
+export const PREFIX_COMMIT_MS = 1_000;
+export const REJECTION_DEADLINE_MS = 1_100;
+export const COMMIT_EFFECT_MS = 260;
+export const REJECTION_EFFECT_MS = 360;
+export const CLEAR_EFFECT_MS = 180;
+
+export type TimerReason =
+  | "inference-wait"
+  | "prefix-commit"
+  | "incomplete"
+  | "invalid"
+  | "unclaimed"
+  | "commit-effect"
+  | "reject-effect"
+  | "clear-effect";
+
+export interface FlowDiagnostics {
+  timerReason: TimerReason | null;
+  timerDeadline: number | null;
+  raster: Float32Array | null;
+  rasterizationMs: number | null;
+  recognition: Recognition | null;
+  inferencePending: boolean;
+  inferenceError: string | null;
+}
+
+export const initialFlowDiagnostics: FlowDiagnostics = {
+  timerReason: null,
+  timerDeadline: null,
+  raster: null,
+  rasterizationMs: null,
+  recognition: null,
+  inferencePending: false,
+  inferenceError: null,
+};
+
+export interface RecognitionRuntime {
+  readonly status: RecognizerStatus;
+  readonly revision: number;
+  subscribe(listener: (status: RecognizerStatus) => void): () => void;
+  invalidate(revision?: number): number;
+  retry(): void;
+  recognize(input: RecognitionInput, revision: number): Promise<Recognition>;
+  dispose(): void;
+}
+
+interface RecognitionFlowOptions {
+  getState: () => VoteInputState;
+  dispatch: (event: VoteInputEvent) => void;
+  getRecognizerStatus: () => RecognizerStatus;
+  getConfidenceThreshold: () => number;
+  getNumericDeck: () => readonly number[];
+  getInk: () => InkPadHandle | null;
+  onDiagnostics: (patch: Partial<FlowDiagnostics>) => void;
+  now?: () => number;
+  commitEffectMs?: number;
+  rejectionEffectMs?: number;
+  clearEffectMs?: number;
+}
+
+interface PendingRecognition {
+  recognition: Recognition;
+  revision: number;
+  latestPointTime: number;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export class RecognitionFlow {
+  private readonly options: RecognitionFlowOptions;
+  private readonly now: () => number;
+  private readonly commitEffectMs: number;
+  private readonly rejectionEffectMs: number;
+  private readonly clearEffectMs: number;
+  private runtime: RecognitionRuntime | null = null;
+  private timeout: ReturnType<typeof setTimeout> | null = null;
+  private requestEpoch = 0;
+  private resumeOnReady = false;
+  private pendingRecognition: PendingRecognition | null = null;
+
+  constructor(options: RecognitionFlowOptions) {
+    this.options = options;
+    this.now = options.now ?? (() => performance.now());
+    this.commitEffectMs = options.commitEffectMs ?? COMMIT_EFFECT_MS;
+    this.rejectionEffectMs = options.rejectionEffectMs ?? REJECTION_EFFECT_MS;
+    this.clearEffectMs = options.clearEffectMs ?? CLEAR_EFFECT_MS;
+  }
+
+  setRuntime(runtime: RecognitionRuntime | null): void {
+    this.runtime = runtime;
+    if (!runtime) {
+      this.cancelPending();
+      this.resumeOnReady = false;
+    }
+  }
+
+  pointerAccepted(): number {
+    const state = this.options.getState();
+    const revision = state.revision + 1;
+    if (!this.runtime) {
+      throw new Error("recognition runtime is not available");
+    }
+
+    // This must happen in the pointerdown call stack before React can render.
+    this.runtime.invalidate(revision);
+    this.cancelPending();
+    this.resumeOnReady = false;
+    this.options.onDiagnostics({
+      recognition: null,
+      inferenceError: null,
+    });
+    this.options.dispatch({ type: "POINTER_ACCEPTED", revision });
+    return revision;
+  }
+
+  strokeCompleted(): void {
+    const state = this.options.getState();
+    const ink = this.options.getInk();
+    const latestPointTime = ink?.getLatestPointTime() ?? null;
+    if (
+      state.status !== "drawing" ||
+      !ink ||
+      ink.isPointerActive() ||
+      latestPointTime === null
+    ) {
+      return;
+    }
+    this.options.dispatch({
+      type: "STROKE_COMPLETED",
+      revision: state.revision,
+    });
+    this.scheduleInference(state.revision, latestPointTime);
+  }
+
+  strokeCancelled(): void {
+    const state = this.options.getState();
+    this.cancelPending();
+    this.resumeOnReady = false;
+    this.options.dispatch({
+      type: "STROKE_CANCELLED",
+      revision: state.revision,
+    });
+  }
+
+  clear(): number {
+    const revision = this.options.getState().revision + 1;
+    this.runtime?.invalidate(revision);
+    this.cancelPending();
+    this.resumeOnReady = false;
+    this.options.getInk()?.clear();
+    this.options.onDiagnostics({
+      raster: null,
+      rasterizationMs: null,
+      recognition: null,
+      inferenceError: null,
+    });
+    this.options.dispatch({ type: "CLEAR", revision });
+    this.scheduleAfter("clear-effect", this.clearEffectMs, () => {
+      this.options.dispatch({ type: "EFFECT_COMPLETED", revision });
+    });
+    return revision;
+  }
+
+  retry(): void {
+    const runtime = this.runtime;
+    if (!runtime) {
+      return;
+    }
+    this.cancelPending();
+    const ink = this.options.getInk();
+    this.resumeOnReady =
+      Boolean(ink && ink.getStats().strokeCount > 0) &&
+      !(ink?.isPointerActive() ?? false);
+    this.options.onDiagnostics({ inferenceError: null });
+    runtime.retry();
+  }
+
+  recognitionConfigurationChanged(): void {
+    if (this.pendingRecognition) {
+      this.revalidateRecognition(this.pendingRecognition);
+    }
+  }
+
+  recognizerStatusChanged(status: RecognizerStatus): void {
+    const state = this.options.getState();
+    if (status.readiness !== "ready" && state.status === "settling") {
+      const ink = this.options.getInk();
+      this.resumeOnReady = Boolean(
+        ink && ink.getStats().strokeCount > 0 && !ink.isPointerActive(),
+      );
+      this.cancelPending();
+      this.options.dispatch({
+        type: "RECOGNIZER_UNAVAILABLE",
+        revision: state.revision,
+      });
+      return;
+    }
+
+    if (status.readiness !== "ready" || !this.resumeOnReady) {
+      return;
+    }
+    this.resumeOnReady = false;
+    const current = this.options.getState();
+    const ink = this.options.getInk();
+    const latestPointTime = ink?.getLatestPointTime() ?? null;
+    if (
+      current.status !== "drawing" ||
+      !ink ||
+      ink.isPointerActive() ||
+      latestPointTime === null ||
+      ink.getStats().strokeCount === 0
+    ) {
+      return;
+    }
+    this.options.dispatch({
+      type: "RETRY_SETTLING",
+      revision: current.revision,
+    });
+    this.scheduleInference(current.revision, latestPointTime);
+  }
+
+  dispose(): void {
+    this.cancelPending();
+    this.runtime = null;
+    this.resumeOnReady = false;
+  }
+
+  private scheduleInference(revision: number, latestPointTime: number): void {
+    this.scheduleAt("inference-wait", latestPointTime + BASE_QUIET_MS, () =>
+      this.runInference(revision, latestPointTime),
+    );
+  }
+
+  private runInference(revision: number, latestPointTime: number): void {
+    const state = this.options.getState();
+    const ink = this.options.getInk();
+    const runtime = this.runtime;
+    if (
+      state.revision !== revision ||
+      state.status !== "settling" ||
+      !ink ||
+      ink.isPointerActive() ||
+      !runtime ||
+      this.options.getRecognizerStatus().readiness !== "ready"
+    ) {
+      return;
+    }
+
+    const rasterStartedAt = this.now();
+    let raster: RasterizedInk | null;
+    try {
+      raster = ink.rasterize();
+    } catch (error) {
+      this.options.onDiagnostics({
+        raster: null,
+        rasterizationMs: this.now() - rasterStartedAt,
+      });
+      this.failInference(revision, error);
+      return;
+    }
+    const rasterizationMs = this.now() - rasterStartedAt;
+    this.options.onDiagnostics({
+      raster: raster ? new Float32Array(raster.data) : null,
+      rasterizationMs,
+      inferenceError: null,
+    });
+    if (!raster) {
+      this.scheduleRejection(
+        revision,
+        latestPointTime,
+        "unclaimed",
+        "unclaimed",
+      );
+      return;
+    }
+
+    const epoch = ++this.requestEpoch;
+    this.options.onDiagnostics({ inferencePending: true });
+    let request: Promise<Recognition>;
+    try {
+      request = runtime.recognize(
+        {
+          data: raster.data,
+          shape: MODEL_INPUT_SHAPE,
+          preprocessingVersion: raster.preprocessingVersion,
+          rasterizationMs,
+        },
+        revision,
+      );
+    } catch (error) {
+      this.failInference(revision, error);
+      return;
+    }
+    void request
+      .then((recognition) => {
+        if (
+          recognition.revision !== revision ||
+          !this.isCurrentRequest(epoch, revision) ||
+          ink.isPointerActive()
+        ) {
+          return;
+        }
+        this.options.onDiagnostics({ recognition, inferenceError: null });
+        const pending = {
+          recognition,
+          revision,
+          latestPointTime,
+        };
+        this.pendingRecognition = pending;
+        this.revalidateRecognition(pending);
+      })
+      .catch((error: unknown) => {
+        if (!this.isCurrentRequest(epoch, revision)) {
+          return;
+        }
+        this.failInference(revision, error);
+      })
+      .finally(() => {
+        if (epoch === this.requestEpoch) {
+          this.options.onDiagnostics({ inferencePending: false });
+        }
+      });
+  }
+
+  private revalidateRecognition(pending: PendingRecognition): void {
+    if (
+      this.pendingRecognition !== pending ||
+      !this.isCurrentRevision(pending.revision) ||
+      this.options.getInk()?.isPointerActive()
+    ) {
+      return;
+    }
+    const disposition = classifyRecognition(
+      pending.recognition,
+      this.options.getConfidenceThreshold(),
+      this.options.getNumericDeck(),
+    );
+    const deadline =
+      disposition.type === "commit"
+        ? pending.latestPointTime +
+          (disposition.delay === "base" ? BASE_QUIET_MS : PREFIX_COMMIT_MS)
+        : pending.latestPointTime + REJECTION_DEADLINE_MS;
+    const reason: TimerReason =
+      disposition.type === "commit"
+        ? disposition.delay === "base"
+          ? "inference-wait"
+          : "prefix-commit"
+        : disposition.rejection;
+
+    if (deadline > this.now()) {
+      this.scheduleAt(reason, deadline, () =>
+        this.revalidateRecognition(pending),
+      );
+      return;
+    }
+    if (disposition.type === "commit") {
+      this.beginCommit(pending.revision, disposition.value);
+    } else {
+      this.beginRejection(pending.revision, disposition.rejection);
+    }
+  }
+
+  private scheduleRejection(
+    revision: number,
+    latestPointTime: number,
+    rejection: RejectionKind,
+    reason: "incomplete" | "invalid" | "unclaimed",
+  ): void {
+    this.scheduleAt(reason, latestPointTime + REJECTION_DEADLINE_MS, () => {
+      this.beginRejection(revision, rejection);
+    });
+  }
+
+  private beginCommit(revision: number, value: number): void {
+    const state = this.options.getState();
+    const ink = this.options.getInk();
+    if (
+      state.revision !== revision ||
+      state.status !== "settling" ||
+      ink?.isPointerActive()
+    ) {
+      return;
+    }
+    this.pendingRecognition = null;
+    this.options.dispatch({ type: "BEGIN_COMMIT", revision, value });
+    this.scheduleAfter("commit-effect", this.commitEffectMs, () => {
+      const current = this.options.getState();
+      if (current.revision !== revision || current.status !== "committing") {
+        return;
+      }
+      this.options.getInk()?.clear();
+      this.options.dispatch({ type: "EFFECT_COMPLETED", revision });
+    });
+  }
+
+  private beginRejection(revision: number, rejection: RejectionKind): void {
+    const state = this.options.getState();
+    const ink = this.options.getInk();
+    if (
+      state.revision !== revision ||
+      state.status !== "settling" ||
+      ink?.isPointerActive()
+    ) {
+      return;
+    }
+    this.pendingRecognition = null;
+    this.options.dispatch({ type: "BEGIN_REJECTION", revision, rejection });
+    this.scheduleAfter("reject-effect", this.rejectionEffectMs, () => {
+      const current = this.options.getState();
+      if (current.revision !== revision || current.status !== "rejecting") {
+        return;
+      }
+      this.options.getInk()?.clear();
+      this.options.dispatch({ type: "EFFECT_COMPLETED", revision });
+    });
+  }
+
+  private isCurrentRequest(epoch: number, revision: number): boolean {
+    return epoch === this.requestEpoch && this.isCurrentRevision(revision);
+  }
+
+  private isCurrentRevision(revision: number): boolean {
+    const state = this.options.getState();
+    return state.revision === revision && state.status === "settling";
+  }
+
+  private failInference(revision: number, error: unknown): void {
+    if (!this.isCurrentRevision(revision)) {
+      return;
+    }
+    const message = errorMessage(error);
+    this.cancelPending();
+    this.options.onDiagnostics({ inferenceError: message });
+    this.options.dispatch({
+      type: "INFERENCE_FAILED",
+      revision,
+      message,
+    });
+  }
+
+  private scheduleAfter(
+    reason: TimerReason,
+    delay: number,
+    action: () => void,
+  ): void {
+    this.scheduleAt(reason, this.now() + Math.max(0, delay), action);
+  }
+
+  private scheduleAt(
+    reason: TimerReason,
+    deadline: number,
+    action: () => void,
+  ): void {
+    this.clearTimer();
+    const delay = deadline - this.now();
+    if (delay <= 0) {
+      this.options.onDiagnostics({
+        timerReason: null,
+        timerDeadline: null,
+      });
+      action();
+      return;
+    }
+    this.options.onDiagnostics({
+      timerReason: reason,
+      timerDeadline: deadline,
+    });
+    this.timeout = setTimeout(() => {
+      this.timeout = null;
+      this.options.onDiagnostics({
+        timerReason: null,
+        timerDeadline: null,
+      });
+      action();
+    }, delay);
+  }
+
+  private cancelPending(): void {
+    this.requestEpoch += 1;
+    this.pendingRecognition = null;
+    this.clearTimer();
+    this.options.onDiagnostics({
+      timerReason: null,
+      timerDeadline: null,
+      inferencePending: false,
+    });
+  }
+
+  private clearTimer(): void {
+    if (this.timeout !== null) {
+      clearTimeout(this.timeout);
+      this.timeout = null;
+    }
+  }
+}

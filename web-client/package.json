@@ -11,6 +11,8 @@
   "scripts": {
     "prepare": "npm run prepare:ort",
     "prepare:ort": "node scripts/copy-ort-assets.mjs",
+    "prepoc": "npm run build",
+    "poc": "vite preview --host 0.0.0.0",
     "predev": "npm run prepare:ort",
     "dev": "vite --host 0.0.0.0",
     "prebuild": "npm run prepare:ort",
@@ -19,9 +21,17 @@
     "preview": "vite preview --host 0.0.0.0",
     "pretest": "npm run prepare:ort",
     "test": "vitest run",
+    "pretest:server": "npm run prepare:ort",
+    "test:server": "node scripts/server-smoke.mjs",
+    "test:launcher": "node scripts/launcher-smoke.mjs",
+    "pretest:benchmark-cleanup": "npm run build",
+    "test:benchmark-cleanup": "node scripts/browser-benchmark-failure-self-test.mjs",
+    "prebenchmark:browser": "npm run build",
+    "benchmark:browser": "node scripts/browser-benchmark.mjs",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "verify": "npm run format:check && npm run lint && npm test && npm run build && npm run test:server && npm run test:launcher && npm run test:benchmark-cleanup"
   },
   "dependencies": {
     "@noble/hashes": "2.2.0",

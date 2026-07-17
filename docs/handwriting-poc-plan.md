@@ -481,14 +481,19 @@ ml/digits/
   transitions.
 - [x] Verify production Vite asset paths for model, worker, `.mjs`, and `.wasm`.
 - [x] Test desktop mouse input.
-- [ ] Provide a production-build URL and qualitative physical-device smoke-test
+- [x] Provide a production-build URL and qualitative physical-device smoke-test
   checklist to the product owner.
+- [x] Provide one root command that installs the locked web dependencies when
+  needed, builds the complete POC, and starts a LAN-accessible plain-HTTP server.
 - [ ] Product owner tests physical iPhone Safari input and lifecycle.
 - [ ] Product owner tests physical Android Chrome input and lifecycle.
-- [ ] In the development browser, record cold load and, after 10 warm-up runs,
+- [x] Reproducibly smoke-test the production server at a nested base, including
+  the entry, stylesheet, worker, exact model size/hash, and ORT JavaScript/WASM
+  status and MIME types.
+- [x] In the development browser, record cold load and, after 10 warm-up runs,
   warm inference median and p95 over 100 runs. Record model and end-to-end timings
   separately.
-- [ ] Make the same benchmark available to the product owner during device smoke
+- [x] Make the same benchmark available to the product owner during device smoke
   testing without making a numeric result part of the qualitative device gate.
 
 ## Acceptance Gates

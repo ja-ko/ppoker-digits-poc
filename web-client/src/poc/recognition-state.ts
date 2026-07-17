@@ -14,6 +14,14 @@ export type VoteInputStatus =
   | "clearing";
 
 export type RejectionKind = "incomplete" | "invalid" | "unclaimed";
+export type RejectionAnimation = "dissipate" | "invalid";
+export type EffectMotion = "full" | "reduced";
+
+export function rejectionAnimation(
+  rejection: RejectionKind,
+): RejectionAnimation {
+  return rejection === "invalid" ? "invalid" : "dissipate";
+}
 
 export interface VoteInputState {
   status: VoteInputStatus;
@@ -21,6 +29,7 @@ export interface VoteInputState {
   value: number | null;
   rejection: RejectionKind | null;
   inferenceError: string | null;
+  effectMotion: EffectMotion | null;
 }
 
 export type VoteInputEvent =
@@ -30,14 +39,20 @@ export type VoteInputEvent =
   | { type: "RETRY_SETTLING"; revision: number }
   | { type: "RECOGNIZER_UNAVAILABLE"; revision: number }
   | { type: "INFERENCE_FAILED"; revision: number; message: string }
-  | { type: "BEGIN_COMMIT"; revision: number; value: number }
+  | {
+      type: "BEGIN_COMMIT";
+      revision: number;
+      value: number;
+      effectMotion: EffectMotion;
+    }
   | {
       type: "BEGIN_REJECTION";
       revision: number;
       rejection: RejectionKind;
+      effectMotion: EffectMotion;
     }
   | { type: "EFFECT_COMPLETED"; revision: number }
-  | { type: "CLEAR"; revision: number };
+  | { type: "CLEAR"; revision: number; effectMotion: EffectMotion };
 
 export const initialVoteInputState: VoteInputState = {
   status: "empty",
@@ -45,6 +60,7 @@ export const initialVoteInputState: VoteInputState = {
   value: null,
   rejection: null,
   inferenceError: null,
+  effectMotion: null,
 };
 
 function isCurrent(state: VoteInputState, revision: number): boolean {
@@ -66,6 +82,7 @@ export function voteInputReducer(
         value: null,
         rejection: null,
         inferenceError: null,
+        effectMotion: null,
       };
     case "STROKE_COMPLETED":
     case "RETRY_SETTLING":
@@ -102,6 +119,7 @@ export function voteInputReducer(
         value: event.value,
         rejection: null,
         inferenceError: null,
+        effectMotion: event.effectMotion,
       };
     case "BEGIN_REJECTION":
       if (!isCurrent(state, event.revision) || state.status !== "settling") {
@@ -113,13 +131,14 @@ export function voteInputReducer(
         value: null,
         rejection: event.rejection,
         inferenceError: null,
+        effectMotion: event.effectMotion,
       };
     case "EFFECT_COMPLETED":
       if (!isCurrent(state, event.revision)) {
         return state;
       }
       if (state.status === "committing") {
-        return { ...state, status: "committed" };
+        return { ...state, status: "committed", effectMotion: null };
       }
       if (state.status === "rejecting" || state.status === "clearing") {
         return {
@@ -128,6 +147,7 @@ export function voteInputReducer(
           value: null,
           rejection: null,
           inferenceError: null,
+          effectMotion: null,
         };
       }
       return state;
@@ -138,9 +158,10 @@ export function voteInputReducer(
       return {
         status: "clearing",
         revision: event.revision,
-        value: null,
+        value: state.status === "committed" ? state.value : null,
         rejection: null,
         inferenceError: null,
+        effectMotion: event.effectMotion,
       };
   }
 }

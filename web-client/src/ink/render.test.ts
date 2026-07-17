@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   canvasMetrics,
   distance,
+  inkBounds,
   midpoint,
   normalizedDevicePixelRatio,
   strokeWidths,
@@ -20,6 +21,28 @@ describe("visible ink geometry", () => {
   it("computes distances and curve midpoints", () => {
     expect(distance(point(0, 0, 0), point(3, 4, 1))).toBe(5);
     expect(midpoint(point(2, 6, 0), point(8, 10, 1))).toEqual({ x: 5, y: 8 });
+  });
+
+  it("derives a padded center from every retained vector stroke", () => {
+    expect(
+      inkBounds(
+        [
+          { points: [point(20, 30, 0), point(80, 130, 1)] },
+          { points: [point(120, 50, 2)] },
+        ],
+        5,
+      ),
+    ).toEqual({
+      minX: 15,
+      minY: 25,
+      maxX: 125,
+      maxY: 135,
+      width: 110,
+      height: 110,
+      centerX: 70,
+      centerY: 80,
+    });
+    expect(inkBounds([{ points: [] }])).toBeNull();
   });
 
   it("makes fast movement narrower without exceeding restrained bounds", () => {

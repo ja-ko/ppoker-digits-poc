@@ -8,6 +8,7 @@ import type {
 } from "../recognition/types";
 import {
   classifyRecognition,
+  rejectionAnimation,
   type RejectionKind,
   type VoteInputEvent,
   type VoteInputState,
@@ -16,9 +17,45 @@ import {
 export const BASE_QUIET_MS = 675;
 export const PREFIX_COMMIT_MS = 1_000;
 export const REJECTION_DEADLINE_MS = 1_100;
-export const COMMIT_EFFECT_MS = 260;
-export const REJECTION_EFFECT_MS = 360;
-export const CLEAR_EFFECT_MS = 180;
+export const COMMIT_EFFECT_MS = 460;
+export const REJECTION_EFFECT_MS = 420;
+export const DISSIPATION_EFFECT_MS = 310;
+export const CLEAR_EFFECT_MS = 220;
+
+export interface EffectDurations {
+  commit: number;
+  invalid: number;
+  dissipate: number;
+  clear: number;
+}
+
+const REDUCED_EFFECT_DURATIONS: EffectDurations = {
+  commit: 90,
+  invalid: 110,
+  dissipate: 90,
+  clear: 90,
+};
+
+export function effectDurations(reducedMotion: boolean): EffectDurations {
+  return reducedMotion
+    ? REDUCED_EFFECT_DURATIONS
+    : {
+        commit: COMMIT_EFFECT_MS,
+        invalid: REJECTION_EFFECT_MS,
+        dissipate: DISSIPATION_EFFECT_MS,
+        clear: CLEAR_EFFECT_MS,
+      };
+}
+
+export function rejectionEffectDuration(
+  rejection: RejectionKind,
+  reducedMotion: boolean,
+): number {
+  const durations = effectDurations(reducedMotion);
+  return rejectionAnimation(rejection) === "invalid"
+    ? durations.invalid
+    : durations.dissipate;
+}
 
 export type TimerReason =
   | "inference-wait"
@@ -72,6 +109,7 @@ interface RecognitionFlowOptions {
   commitEffectMs?: number;
   rejectionEffectMs?: number;
   clearEffectMs?: number;
+  getReducedMotion?: () => boolean;
 }
 
 interface PendingRecognition {
@@ -87,9 +125,10 @@ function errorMessage(error: unknown): string {
 export class RecognitionFlow {
   private readonly options: RecognitionFlowOptions;
   private readonly now: () => number;
-  private readonly commitEffectMs: number;
-  private readonly rejectionEffectMs: number;
-  private readonly clearEffectMs: number;
+  private readonly commitEffectMs: number | undefined;
+  private readonly rejectionEffectMs: number | undefined;
+  private readonly clearEffectMs: number | undefined;
+  private readonly getReducedMotion: () => boolean;
   private runtime: RecognitionRuntime | null = null;
   private timeout: ReturnType<typeof setTimeout> | null = null;
   private requestEpoch = 0;
@@ -99,9 +138,15 @@ export class RecognitionFlow {
   constructor(options: RecognitionFlowOptions) {
     this.options = options;
     this.now = options.now ?? (() => performance.now());
-    this.commitEffectMs = options.commitEffectMs ?? COMMIT_EFFECT_MS;
-    this.rejectionEffectMs = options.rejectionEffectMs ?? REJECTION_EFFECT_MS;
-    this.clearEffectMs = options.clearEffectMs ?? CLEAR_EFFECT_MS;
+    this.commitEffectMs = options.commitEffectMs;
+    this.rejectionEffectMs = options.rejectionEffectMs;
+    this.clearEffectMs = options.clearEffectMs;
+    this.getReducedMotion =
+      options.getReducedMotion ??
+      (() =>
+        typeof window !== "undefined" &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
 
   setRuntime(runtime: RecognitionRuntime | null): void {
@@ -120,6 +165,7 @@ export class RecognitionFlow {
     }
 
     // This must happen in the pointerdown call stack before React can render.
+    this.options.getInk()?.restoreVectorInk();
     this.runtime.invalidate(revision);
     this.cancelPending();
     this.resumeOnReady = false;
@@ -162,6 +208,7 @@ export class RecognitionFlow {
 
   clear(): number {
     const revision = this.options.getState().revision + 1;
+    const reducedMotion = this.getReducedMotion();
     this.runtime?.invalidate(revision);
     this.cancelPending();
     this.resumeOnReady = false;
@@ -172,8 +219,13 @@ export class RecognitionFlow {
       recognition: null,
       inferenceError: null,
     });
-    this.options.dispatch({ type: "CLEAR", revision });
-    this.scheduleAfter("clear-effect", this.clearEffectMs, () => {
+    this.options.dispatch({
+      type: "CLEAR",
+      revision,
+      effectMotion: reducedMotion ? "reduced" : "full",
+    });
+    const duration = this.clearEffectMs ?? effectDurations(reducedMotion).clear;
+    this.scheduleAfter("clear-effect", duration, () => {
       this.options.dispatch({ type: "EFFECT_COMPLETED", revision });
     });
     return revision;
@@ -400,8 +452,16 @@ export class RecognitionFlow {
       return;
     }
     this.pendingRecognition = null;
-    this.options.dispatch({ type: "BEGIN_COMMIT", revision, value });
-    this.scheduleAfter("commit-effect", this.commitEffectMs, () => {
+    const reducedMotion = this.getReducedMotion();
+    this.options.dispatch({
+      type: "BEGIN_COMMIT",
+      revision,
+      value,
+      effectMotion: reducedMotion ? "reduced" : "full",
+    });
+    const duration =
+      this.commitEffectMs ?? effectDurations(reducedMotion).commit;
+    this.scheduleAfter("commit-effect", duration, () => {
       const current = this.options.getState();
       if (current.revision !== revision || current.status !== "committing") {
         return;
@@ -422,8 +482,17 @@ export class RecognitionFlow {
       return;
     }
     this.pendingRecognition = null;
-    this.options.dispatch({ type: "BEGIN_REJECTION", revision, rejection });
-    this.scheduleAfter("reject-effect", this.rejectionEffectMs, () => {
+    const reducedMotion = this.getReducedMotion();
+    this.options.dispatch({
+      type: "BEGIN_REJECTION",
+      revision,
+      rejection,
+      effectMotion: reducedMotion ? "reduced" : "full",
+    });
+    const duration =
+      this.rejectionEffectMs ??
+      rejectionEffectDuration(rejection, reducedMotion);
+    this.scheduleAfter("reject-effect", duration, () => {
       const current = this.options.getState();
       if (current.revision !== revision || current.status !== "rejecting") {
         return;

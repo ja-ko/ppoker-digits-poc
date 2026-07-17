@@ -18,6 +18,17 @@ export interface CanvasMetrics {
   dpr: number;
 }
 
+export interface InkBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+  width: number;
+  height: number;
+  centerX: number;
+  centerY: number;
+}
+
 type DevicePixelRatioSource = Pick<Window, "devicePixelRatio" | "matchMedia">;
 
 const DEFAULT_STYLE: VisibleInkStyle = {
@@ -42,6 +53,49 @@ export function midpoint(a: InkPoint, b: InkPoint): Pick<InkPoint, "x" | "y"> {
   return {
     x: (a.x + b.x) / 2,
     y: (a.y + b.y) / 2,
+  };
+}
+
+export function inkBounds(
+  strokes: readonly InkStroke[],
+  padding = 0,
+): InkBounds | null {
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+
+  for (const stroke of strokes) {
+    for (const point of stroke.points) {
+      if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+        continue;
+      }
+      minX = Math.min(minX, point.x);
+      minY = Math.min(minY, point.y);
+      maxX = Math.max(maxX, point.x);
+      maxY = Math.max(maxY, point.y);
+    }
+  }
+
+  if (!Number.isFinite(minX)) {
+    return null;
+  }
+
+  const inset = Number.isFinite(padding) ? Math.max(0, padding) : 0;
+  minX -= inset;
+  minY -= inset;
+  maxX += inset;
+  maxY += inset;
+
+  return {
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: maxX - minX,
+    height: maxY - minY,
+    centerX: (minX + maxX) / 2,
+    centerY: (minY + maxY) / 2,
   };
 }
 

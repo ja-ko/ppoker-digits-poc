@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { PREPROCESSING_CONFIG } from "../ink/rasterize";
 import type { Recognition, RecognizerStatus } from "../recognition/types";
@@ -78,194 +78,223 @@ export function Diagnostics({
   onCancelBenchmark,
 }: DiagnosticsProps) {
   const rasterRef = useRef<HTMLCanvasElement>(null);
+  const inspectorId = useId();
+  const [expanded, setExpanded] = useState(false);
   const recognition: Recognition | null = flow.recognition;
 
   useEffect(() => {
     if (rasterRef.current) {
       paintRaster(rasterRef.current, flow.raster);
     }
-  }, [flow.raster]);
+  }, [expanded, flow.raster]);
 
   return (
-    <aside className="diagnostics" aria-label="Recognition diagnostics">
-      <div className="diagnostics-heading">
-        <strong>Diagnostics</strong>
-        <span>{PREPROCESSING_CONFIG.version}</span>
+    <aside
+      className="diagnostics"
+      data-expanded={expanded}
+      aria-label="Recognition diagnostics"
+    >
+      <div className="diagnostics-summary">
+        <div>
+          <strong>Diagnostics</strong>
+          <span>
+            {recognizer.readiness} / {input.status} / r{input.revision}
+          </span>
+        </div>
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-controls={inspectorId}
+          onClick={() => setExpanded((current) => !current)}
+        >
+          {expanded ? "Close" : "Inspect"}
+        </button>
       </div>
 
-      <canvas
-        ref={rasterRef}
-        className="diagnostics-raster"
-        width={PREPROCESSING_CONFIG.width}
-        height={PREPROCESSING_CONFIG.height}
-        role="img"
-        aria-label="Exact 128 by 32 nearest-neighbor recognition raster"
-      />
+      <div
+        id={inspectorId}
+        className="diagnostics-inspector"
+        hidden={!expanded}
+      >
+        <div className="diagnostics-heading">
+          <strong>Recognition inspector</strong>
+          <span>{PREPROCESSING_CONFIG.version}</span>
+        </div>
 
-      <dl className="diagnostics-grid">
-        <div>
-          <dt>runtime</dt>
-          <dd>{recognizer.readiness}</dd>
-        </div>
-        <div>
-          <dt>runtime detail</dt>
-          <dd>{recognizer.error?.message ?? recognizer.status}</dd>
-        </div>
-        <div>
-          <dt>input</dt>
-          <dd>{input.status}</dd>
-        </div>
-        <div>
-          <dt>revision</dt>
-          <dd>{input.revision}</dd>
-        </div>
-        <div>
-          <dt>pointer</dt>
-          <dd>{activePointer ? "active" : "idle"}</dd>
-        </div>
-        <div>
-          <dt>timer</dt>
-          <dd>
-            {flow.timerReason ?? "none"}
-            {flow.timerDeadline !== null &&
-              ` @ ${flow.timerDeadline.toFixed(1)}`}
-          </dd>
-        </div>
-        <div>
-          <dt>strokes / points</dt>
-          <dd>
-            {inkStats.strokeCount} / {inkStats.pointCount}
-          </dd>
-        </div>
-        <div>
-          <dt>raw text</dt>
-          <dd>{recognition?.text || "-"}</dd>
-        </div>
-        <div>
-          <dt>greedy text</dt>
-          <dd>{recognition?.diagnostics.greedyText || "-"}</dd>
-        </div>
-        <div>
-          <dt>confidence</dt>
-          <dd>{formatMetric(recognition?.confidence, 6)}</dd>
-        </div>
-        <div>
-          <dt>threshold pass</dt>
-          <dd>
-            {recognition
-              ? recognition.confidence >= threshold
-                ? "yes"
-                : "no"
-              : "-"}
-          </dd>
-        </div>
-        <div>
-          <dt>top / second</dt>
-          <dd>
-            {formatMetric(recognition?.diagnostics.topScore, 3)} /{" "}
-            {formatMetric(recognition?.diagnostics.secondScore, 3)}
-          </dd>
-        </div>
-        <div>
-          <dt>margin</dt>
-          <dd>{formatMetric(recognition?.diagnostics.margin, 3)}</dd>
-        </div>
-        <div>
-          <dt>raw margin threshold</dt>
-          <dd>{formatMetric(recognition?.diagnostics.rawThreshold, 3)}</dd>
-        </div>
-        <div>
-          <dt>raster ms</dt>
-          <dd>{formatMetric(flow.rasterizationMs)}</dd>
-        </div>
-        <div>
-          <dt>model ms</dt>
-          <dd>{formatMetric(recognition?.diagnostics.timing.inferenceMs)}</dd>
-        </div>
-        <div>
-          <dt>worker ms</dt>
-          <dd>{formatMetric(recognition?.diagnostics.timing.workerMs)}</dd>
-        </div>
-        <div>
-          <dt>roundtrip ms</dt>
-          <dd>
-            {formatMetric(recognition?.diagnostics.timing.workerRoundTripMs)}
-          </dd>
-        </div>
-      </dl>
-
-      <div className="diagnostics-alternatives">
-        <span>alternatives / CTC log score</span>
-        <ol>
-          {recognition?.alternatives.map((alternative) => (
-            <li key={`${alternative.text}:${alternative.score}`}>
-              <code>{alternative.text || "<empty>"}</code>
-              <span>{formatMetric(alternative.score, 4)}</span>
-            </li>
-          )) ?? <li>none</li>}
-        </ol>
-      </div>
-
-      <label className="diagnostics-control">
-        <span>Confidence threshold</span>
-        <input
-          type="number"
-          min="0"
-          max="1"
-          step="0.001"
-          value={threshold}
-          onChange={(event) => {
-            const value = Number(event.target.value);
-            if (Number.isFinite(value)) {
-              onThresholdChange(Math.min(1, Math.max(0, value)));
-            }
-          }}
+        <canvas
+          ref={rasterRef}
+          className="diagnostics-raster"
+          width={PREPROCESSING_CONFIG.width}
+          height={PREPROCESSING_CONFIG.height}
+          role="img"
+          aria-label="Exact 128 by 32 nearest-neighbor recognition raster"
         />
-      </label>
 
-      <label className="diagnostics-control">
-        <span>Numeric mock deck</span>
-        <input
-          type="text"
-          value={deckInput}
-          onChange={(event) => onDeckInputChange(event.target.value)}
-          spellCheck={false}
-        />
-      </label>
-      <p className="diagnostics-deck-result">
-        accepted: {parsedDeck.values.join(", ") || "none"}; context: coffee
-        {parsedDeck.rejected.length > 0 && (
-          <>; rejected: {parsedDeck.rejected.join(", ")}</>
-        )}
-      </p>
+        <dl className="diagnostics-grid">
+          <div>
+            <dt>runtime</dt>
+            <dd>{recognizer.readiness}</dd>
+          </div>
+          <div>
+            <dt>runtime detail</dt>
+            <dd>{recognizer.error?.message ?? recognizer.status}</dd>
+          </div>
+          <div>
+            <dt>input</dt>
+            <dd>{input.status}</dd>
+          </div>
+          <div>
+            <dt>revision</dt>
+            <dd>{input.revision}</dd>
+          </div>
+          <div>
+            <dt>pointer</dt>
+            <dd>{activePointer ? "active" : "idle"}</dd>
+          </div>
+          <div>
+            <dt>timer</dt>
+            <dd>
+              {flow.timerReason ?? "none"}
+              {flow.timerDeadline !== null &&
+                ` @ ${flow.timerDeadline.toFixed(1)}`}
+            </dd>
+          </div>
+          <div>
+            <dt>strokes / points</dt>
+            <dd>
+              {inkStats.strokeCount} / {inkStats.pointCount}
+            </dd>
+          </div>
+          <div>
+            <dt>raw text</dt>
+            <dd>{recognition?.text || "-"}</dd>
+          </div>
+          <div>
+            <dt>greedy text</dt>
+            <dd>{recognition?.diagnostics.greedyText || "-"}</dd>
+          </div>
+          <div>
+            <dt>confidence</dt>
+            <dd>{formatMetric(recognition?.confidence, 6)}</dd>
+          </div>
+          <div>
+            <dt>threshold pass</dt>
+            <dd>
+              {recognition
+                ? recognition.confidence >= threshold
+                  ? "yes"
+                  : "no"
+                : "-"}
+            </dd>
+          </div>
+          <div>
+            <dt>top / second</dt>
+            <dd>
+              {formatMetric(recognition?.diagnostics.topScore, 3)} /{" "}
+              {formatMetric(recognition?.diagnostics.secondScore, 3)}
+            </dd>
+          </div>
+          <div>
+            <dt>margin</dt>
+            <dd>{formatMetric(recognition?.diagnostics.margin, 3)}</dd>
+          </div>
+          <div>
+            <dt>raw margin threshold</dt>
+            <dd>{formatMetric(recognition?.diagnostics.rawThreshold, 3)}</dd>
+          </div>
+          <div>
+            <dt>raster ms</dt>
+            <dd>{formatMetric(flow.rasterizationMs)}</dd>
+          </div>
+          <div>
+            <dt>model ms</dt>
+            <dd>{formatMetric(recognition?.diagnostics.timing.inferenceMs)}</dd>
+          </div>
+          <div>
+            <dt>worker ms</dt>
+            <dd>{formatMetric(recognition?.diagnostics.timing.workerMs)}</dd>
+          </div>
+          <div>
+            <dt>roundtrip ms</dt>
+            <dd>
+              {formatMetric(recognition?.diagnostics.timing.workerRoundTripMs)}
+            </dd>
+          </div>
+        </dl>
 
-      <div className="diagnostics-benchmark">
-        <div>
-          <span>Warm benchmark</span>
-          <small>10 warmups + 100 measured runs</small>
+        <div className="diagnostics-alternatives">
+          <span>alternatives / CTC log score</span>
+          <ol>
+            {recognition?.alternatives.map((alternative) => (
+              <li key={`${alternative.text}:${alternative.score}`}>
+                <code>{alternative.text || "<empty>"}</code>
+                <span>{formatMetric(alternative.score, 4)}</span>
+              </li>
+            )) ?? <li>none</li>}
+          </ol>
         </div>
-        {benchmark.status === "running" ? (
-          <button type="button" onClick={onCancelBenchmark}>
-            Cancel {benchmark.completed}/{benchmark.total}
-          </button>
-        ) : (
-          <button
-            type="button"
-            disabled={!benchmarkAvailable}
-            onClick={onStartBenchmark}
-          >
-            Run benchmark
-          </button>
-        )}
-        {benchmark.summary && (
-          <p>
-            Model median/p95 {formatMetric(benchmark.summary.model.median)}/
-            {formatMetric(benchmark.summary.model.p95)} ms; roundtrip median/p95{" "}
-            {formatMetric(benchmark.summary.roundTrip.median)}/
-            {formatMetric(benchmark.summary.roundTrip.p95)} ms
-          </p>
-        )}
-        {benchmark.error && <p>{benchmark.error}</p>}
+
+        <label className="diagnostics-control">
+          <span>Confidence threshold</span>
+          <input
+            type="number"
+            min="0"
+            max="1"
+            step="0.001"
+            value={threshold}
+            onChange={(event) => {
+              const value = Number(event.target.value);
+              if (Number.isFinite(value)) {
+                onThresholdChange(Math.min(1, Math.max(0, value)));
+              }
+            }}
+          />
+        </label>
+
+        <label className="diagnostics-control">
+          <span>Numeric mock deck</span>
+          <input
+            type="text"
+            value={deckInput}
+            onChange={(event) => onDeckInputChange(event.target.value)}
+            spellCheck={false}
+          />
+        </label>
+        <p className="diagnostics-deck-result">
+          accepted: {parsedDeck.values.join(", ") || "none"}; context: coffee
+          {parsedDeck.rejected.length > 0 && (
+            <>; rejected: {parsedDeck.rejected.join(", ")}</>
+          )}
+        </p>
+
+        <div className="diagnostics-benchmark">
+          <div>
+            <span>Warm benchmark</span>
+            <small>10 warmups + 100 measured runs</small>
+          </div>
+          {benchmark.status === "running" ? (
+            <button type="button" onClick={onCancelBenchmark}>
+              Cancel {benchmark.completed}/{benchmark.total}
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={!benchmarkAvailable}
+              onClick={onStartBenchmark}
+            >
+              Run benchmark
+            </button>
+          )}
+          {benchmark.summary && (
+            <p>
+              Model median/p95 {formatMetric(benchmark.summary.model.median)}/
+              {formatMetric(benchmark.summary.model.p95)} ms; roundtrip
+              median/p95 {formatMetric(benchmark.summary.roundTrip.median)}/
+              {formatMetric(benchmark.summary.roundTrip.p95)} ms
+            </p>
+          )}
+          {benchmark.error && <p>{benchmark.error}</p>}
+        </div>
       </div>
     </aside>
   );

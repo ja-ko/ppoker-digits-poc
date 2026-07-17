@@ -8,9 +8,9 @@ import {
 
 import {
   appendOrderedPoints,
+  fitCoordinateSpace,
   isPrimaryPointerStart,
   pointsFromPointerEvent,
-  resizeTransform,
   strokeToViewport,
   viewportPointToCanonical,
 } from "./ink/capture";
@@ -24,12 +24,13 @@ import type { RasterizedInk } from "./ink/rasterize";
 import {
   clearInk,
   drawInk,
+  inkBounds,
   normalizedDevicePixelRatio,
   renderInk,
   resizeCanvas,
   watchDevicePixelRatio,
 } from "./ink/render";
-import type { CanvasMetrics, VisibleInkStyle } from "./ink/render";
+import type { CanvasMetrics, InkBounds, VisibleInkStyle } from "./ink/render";
 import type { ImmutableInkStroke, InkStroke } from "./ink/types";
 
 interface ActiveStroke {
@@ -50,8 +51,27 @@ export interface InkPadHandle {
   getLatestPointTime(): number | null;
   getStats(): InkStats;
   getStrokes(): readonly ImmutableInkStroke[];
+  getVisualBounds(): InkVisualBounds | null;
+  getCanonicalInkLocus(): CanonicalInkLocus | null;
   rasterize(): RasterizedInk | null;
+  restoreVectorInk(): void;
+  focus(): void;
   clear(): void;
+}
+
+export interface InkVisualBounds extends InkBounds {
+  surfaceWidth: number;
+  surfaceHeight: number;
+}
+
+export interface InkSurfaceSize {
+  width: number;
+  height: number;
+}
+
+export interface CanonicalInkLocus {
+  readonly center: Readonly<{ x: number; y: number }>;
+  readonly coordinateSpace: Readonly<InkSurfaceSize>;
 }
 
 export interface InkPadProps {
@@ -61,6 +81,7 @@ export interface InkPadProps {
   onActivePointerChange?: (active: boolean) => void;
   onStrokeComplete?: (stats: InkStats) => void;
   onStrokeCancel?: (reason: StrokeCancellationReason, stats: InkStats) => void;
+  onSurfaceChange?: (size: InkSurfaceSize) => void;
   onClear?: () => void;
 }
 
@@ -108,15 +129,20 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
     onActivePointerChange,
     onStrokeComplete,
     onStrokeCancel,
+    onSurfaceChange,
     onClear,
   },
   ref,
 ) {
+  const surfaceRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const completedStrokesRef = useRef<InkStroke[]>([]);
   const activeStrokeRef = useRef<ActiveStroke | null>(null);
   const latestPointTimeRef = useRef<number | null>(null);
+  const visualBoundsRef = useRef<InkVisualBounds | null>(null);
+  const canonicalInkLocusRef = useRef<CanonicalInkLocus | null>(null);
   const clearRef = useRef<() => void>(() => undefined);
+  const restoreVectorInkRef = useRef<() => void>(() => undefined);
   const cancelRef = useRef<
     (reason: StrokeCancellationReason, notify?: boolean) => void
   >(() => undefined);
@@ -126,6 +152,7 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
     onActivePointerChange,
     onStrokeComplete,
     onStrokeCancel,
+    onSurfaceChange,
     onClear,
   });
 
@@ -136,6 +163,7 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
       onActivePointerChange,
       onStrokeComplete,
       onStrokeCancel,
+      onSurfaceChange,
       onClear,
     };
   }, [
@@ -144,6 +172,7 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
     onActivePointerChange,
     onStrokeComplete,
     onStrokeCancel,
+    onSurfaceChange,
     onClear,
   ]);
 
@@ -160,15 +189,20 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
       getLatestPointTime: () => latestPointTimeRef.current,
       getStats: () => inkStats(completedStrokesRef.current),
       getStrokes: () => immutableStrokeSnapshot(completedStrokesRef.current),
+      getVisualBounds: () => visualBoundsRef.current,
+      getCanonicalInkLocus: () => canonicalInkLocusRef.current,
       rasterize: () => rasterizeInk(completedStrokesRef.current),
+      restoreVectorInk: () => restoreVectorInkRef.current(),
+      focus: () => surfaceRef.current?.focus({ preventScroll: true }),
       clear: () => clearRef.current(),
     }),
     [],
   );
 
   useEffect(() => {
+    const surface = surfaceRef.current;
     const canvas = canvasRef.current;
-    if (!canvas) {
+    if (!surface || !canvas) {
       return;
     }
 
@@ -180,6 +214,7 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
     let pointerOrigin: PointerOrigin = { left: 0, top: 0 };
     let animationFrame: number | null = null;
     let orientationFrame: number | null = null;
+    let restorationFrame: number | null = null;
 
     const visibleStyle = (): Partial<VisibleInkStyle> => {
       if (!metrics) {
@@ -196,6 +231,39 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
       return viewportTransform
         ? strokeToViewport(stroke, viewportTransform)
         : stroke;
+    };
+
+    const updateVisualBounds = () => {
+      if (!metrics) {
+        visualBoundsRef.current = null;
+        return;
+      }
+      const style = visibleStyle();
+      const bounds = inkBounds(
+        completedStrokesRef.current.map(viewportStroke),
+        (style.maxWidth ?? 8) / 2 + 2,
+      );
+      visualBoundsRef.current = bounds
+        ? {
+            ...bounds,
+            surfaceWidth: metrics.logicalWidth,
+            surfaceHeight: metrics.logicalHeight,
+          }
+        : null;
+    };
+
+    const updateCanonicalInkLocus = () => {
+      const bounds = inkBounds(completedStrokesRef.current);
+      canonicalInkLocusRef.current =
+        bounds && canonicalSurface
+          ? Object.freeze({
+              center: Object.freeze({
+                x: bounds.centerX,
+                y: bounds.centerY,
+              }),
+              coordinateSpace: Object.freeze({ ...canonicalSurface }),
+            })
+          : null;
     };
 
     const rebuildCompletedInk = () => {
@@ -219,14 +287,17 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
         metrics.logicalHeight,
         visibleStyle(),
       );
+      updateVisualBounds();
     };
 
     const appendCompletedInk = (stroke: InkStroke) => {
+      updateCanonicalInkLocus();
       const context = completedInkCanvas.getContext("2d");
       if (!context) {
         return;
       }
       drawInk(context, [viewportStroke(stroke)], visibleStyle());
+      updateVisualBounds();
     };
 
     const paint = () => {
@@ -253,9 +324,37 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
       }
     };
 
+    const restoreVectorInk = () => {
+      if (restorationFrame !== null) {
+        window.cancelAnimationFrame(restorationFrame);
+      }
+      for (const animation of canvas.getAnimations?.() ?? []) {
+        animation.cancel();
+      }
+      canvas.style.setProperty("animation", "none", "important");
+      canvas.style.setProperty("transition", "none", "important");
+      canvas.style.setProperty("opacity", "1", "important");
+      canvas.style.setProperty("transform", "none", "important");
+      canvas.style.setProperty("filter", "none", "important");
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+        animationFrame = null;
+      }
+      paint();
+      restorationFrame = window.requestAnimationFrame(() => {
+        restorationFrame = null;
+        canvas.style.removeProperty("animation");
+        canvas.style.removeProperty("transition");
+        canvas.style.removeProperty("opacity");
+        canvas.style.removeProperty("transform");
+        canvas.style.removeProperty("filter");
+      });
+    };
+    restoreVectorInkRef.current = restoreVectorInk;
+
     const releaseCapture = (pointerId: number) => {
-      if (canvas.hasPointerCapture(pointerId)) {
-        canvas.releasePointerCapture(pointerId);
+      if (surface.hasPointerCapture(pointerId)) {
+        surface.releasePointerCapture(pointerId);
       }
     };
 
@@ -285,7 +384,7 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
 
     const resizeSurface = () => {
       cancelActiveStroke("resize");
-      const bounds = canvas.getBoundingClientRect();
+      const bounds = surface.getBoundingClientRect();
       if (bounds.width <= 0 || bounds.height <= 0) {
         return;
       }
@@ -302,11 +401,15 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
           height: metrics.logicalHeight,
         };
       }
-      viewportTransform = resizeTransform(canonicalSurface, {
+      viewportTransform = fitCoordinateSpace(canonicalSurface, {
         width: metrics.logicalWidth,
         height: metrics.logicalHeight,
       });
       rebuildCompletedInk();
+      propsRef.current.onSurfaceChange?.({
+        width: metrics.logicalWidth,
+        height: metrics.logicalHeight,
+      });
       requestPaint();
     };
 
@@ -349,7 +452,7 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
       appendCapturedPoints(stroke, event);
       activeStrokeRef.current = { pointerId: event.pointerId, stroke };
       propsRef.current.onActivePointerChange?.(true);
-      canvas.setPointerCapture(event.pointerId);
+      surface.setPointerCapture(event.pointerId);
       requestPaint();
     };
 
@@ -412,31 +515,36 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
       cancelActiveStroke("disabled", false);
       completedStrokesRef.current.length = 0;
       latestPointTimeRef.current = null;
+      visualBoundsRef.current = null;
+      canonicalInkLocusRef.current = null;
       if (metrics) {
         canonicalSurface = {
           width: metrics.logicalWidth,
           height: metrics.logicalHeight,
         };
-        viewportTransform = resizeTransform(canonicalSurface, canonicalSurface);
+        viewportTransform = fitCoordinateSpace(
+          canonicalSurface,
+          canonicalSurface,
+        );
       }
       rebuildCompletedInk();
       propsRef.current.onClear?.();
       requestPaint();
     };
 
-    canvas.addEventListener("pointerdown", onPointerDown);
-    canvas.addEventListener("pointermove", onPointerMove);
-    canvas.addEventListener("pointerup", onPointerUp);
-    canvas.addEventListener("pointercancel", onPointerCancel);
-    canvas.addEventListener("lostpointercapture", onLostPointerCapture);
-    canvas.addEventListener("contextmenu", suppressDefault);
-    canvas.addEventListener("dragstart", suppressDefault);
-    canvas.addEventListener("selectstart", suppressDefault);
+    surface.addEventListener("pointerdown", onPointerDown);
+    surface.addEventListener("pointermove", onPointerMove);
+    surface.addEventListener("pointerup", onPointerUp);
+    surface.addEventListener("pointercancel", onPointerCancel);
+    surface.addEventListener("lostpointercapture", onLostPointerCapture);
+    surface.addEventListener("contextmenu", suppressDefault);
+    surface.addEventListener("dragstart", suppressDefault);
+    surface.addEventListener("selectstart", suppressDefault);
     window.addEventListener("resize", resizeSurface);
     window.addEventListener("orientationchange", onOrientationChange);
 
     const resizeObserver = new ResizeObserver(resizeSurface);
-    resizeObserver.observe(canvas);
+    resizeObserver.observe(surface);
     const stopWatchingDevicePixelRatio = watchDevicePixelRatio(
       window,
       resizeSurface,
@@ -445,6 +553,7 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
 
     return () => {
       clearRef.current = () => undefined;
+      restoreVectorInkRef.current = () => undefined;
       cancelRef.current = () => undefined;
       if (animationFrame !== null) {
         window.cancelAnimationFrame(animationFrame);
@@ -452,28 +561,39 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
       if (orientationFrame !== null) {
         window.cancelAnimationFrame(orientationFrame);
       }
+      if (restorationFrame !== null) {
+        window.cancelAnimationFrame(restorationFrame);
+      }
       stopWatchingDevicePixelRatio();
       resizeObserver.disconnect();
-      canvas.removeEventListener("pointerdown", onPointerDown);
-      canvas.removeEventListener("pointermove", onPointerMove);
-      canvas.removeEventListener("pointerup", onPointerUp);
-      canvas.removeEventListener("pointercancel", onPointerCancel);
-      canvas.removeEventListener("lostpointercapture", onLostPointerCapture);
-      canvas.removeEventListener("contextmenu", suppressDefault);
-      canvas.removeEventListener("dragstart", suppressDefault);
-      canvas.removeEventListener("selectstart", suppressDefault);
+      surface.removeEventListener("pointerdown", onPointerDown);
+      surface.removeEventListener("pointermove", onPointerMove);
+      surface.removeEventListener("pointerup", onPointerUp);
+      surface.removeEventListener("pointercancel", onPointerCancel);
+      surface.removeEventListener("lostpointercapture", onLostPointerCapture);
+      surface.removeEventListener("contextmenu", suppressDefault);
+      surface.removeEventListener("dragstart", suppressDefault);
+      surface.removeEventListener("selectstart", suppressDefault);
       window.removeEventListener("resize", resizeSurface);
       window.removeEventListener("orientationchange", onOrientationChange);
     };
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className={`ink-canvas ${className}`.trim()}
+    <div
+      ref={surfaceRef}
+      className="ink-surface"
+      role="region"
+      tabIndex={-1}
       aria-label="Handwriting surface. Write a number from zero through 255."
       aria-describedby="ink-instructions"
       aria-disabled={!enabled}
-    />
+    >
+      <canvas
+        ref={canvasRef}
+        className={`ink-canvas ${className}`.trim()}
+        aria-hidden="true"
+      />
+    </div>
   );
 });

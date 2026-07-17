@@ -15,9 +15,11 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --motion-fast: 180ms;
-  --commit-effect-ms: 260ms;
-  --reject-effect-ms: 360ms;
-  --clear-effect-ms: 180ms;
+  --commit-effect-ms: 460ms;
+  --invalid-effect-ms: 420ms;
+  --dissipate-effect-ms: 310ms;
+  --clear-effect-ms: 220ms;
+  --settle-ease: cubic-bezier(0.2, 0.78, 0.22, 1);
 }
 
 * {
@@ -50,6 +52,7 @@ body {
 
 button,
 canvas,
+.ink-surface,
 .ink-shell {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -146,64 +149,136 @@ button {
   top: 100%;
 }
 
+.ink-surface {
+  position: fixed;
+  z-index: 2;
+  inset: 0;
+  cursor: crosshair;
+  touch-action: none;
+  outline: none;
+}
+
+.ink-surface[aria-disabled="true"] {
+  cursor: default;
+}
+
+.ink-surface:focus-visible {
+  outline: 1px solid rgba(214, 173, 101, 0.5);
+  outline-offset: -3px;
+}
+
 .ink-canvas {
   position: absolute;
-  z-index: 2;
   inset: 0;
   display: block;
   width: 100%;
   height: 100%;
-  cursor: crosshair;
-  touch-action: none;
-  transform-origin: 50% 56%;
-  transition:
-    opacity var(--commit-effect-ms) ease,
-    filter var(--motion-fast) ease,
-    transform var(--commit-effect-ms) cubic-bezier(0.22, 0.8, 0.24, 1);
-}
-
-.ink-canvas[aria-disabled="true"] {
-  cursor: default;
+  pointer-events: none;
+  opacity: 1;
+  filter: none;
+  transform: none;
+  transform-origin: var(--ink-center-x, 50%) var(--ink-center-y, 56%);
 }
 
 .input-committing .ink-canvas {
-  opacity: 0;
-  transform: scale(0.9);
+  animation: ink-resolve var(--commit-effect-ms) var(--settle-ease) both;
 }
 
 .input-committed .ink-canvas {
   opacity: 0;
 }
 
-.input-rejecting .ink-canvas {
-  animation: ink-fade var(--reject-effect-ms) ease forwards;
+.input-rejecting[data-ink-effect="invalid"] .ink-canvas {
+  animation: ink-invalid var(--invalid-effect-ms)
+    cubic-bezier(0.3, 0.65, 0.3, 1) both;
 }
 
-.input-rejecting[data-rejection="invalid"] .ink-canvas {
-  animation:
-    ink-invalid var(--reject-effect-ms) ease,
-    ink-fade var(--reject-effect-ms) ease forwards;
+.input-rejecting[data-ink-effect="dissipate"] .ink-canvas {
+  animation: ink-dissipate var(--dissipate-effect-ms) ease-out both;
+}
+
+.input-clearing .ink-canvas {
+  animation: surface-return var(--clear-effect-ms) ease-out both;
+}
+
+@keyframes ink-resolve {
+  0% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate(0, 0) scale(1);
+  }
+
+  42% {
+    opacity: 0.86;
+    transform: translate(0, 0) scale(0.94);
+  }
+
+  72% {
+    opacity: 0.34;
+    transform: translate(var(--ink-settle-x), var(--ink-settle-y)) scale(0.79);
+  }
+
+  100% {
+    opacity: 0;
+    filter: blur(0.7px);
+    transform: translate(var(--ink-settle-x), var(--ink-settle-y)) scale(0.68);
+  }
 }
 
 @keyframes ink-invalid {
-  22% {
-    transform: translateX(-0.65rem);
+  0%,
+  13% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateX(0) scale(1);
   }
-  44% {
-    transform: translateX(0.55rem);
-  }
-  66% {
-    transform: translateX(-0.25rem);
-  }
-}
 
-@keyframes ink-fade {
-  65% {
-    opacity: 0.72;
+  22% {
+    transform: translateX(-10px) scale(0.99, 0.965);
   }
+
+  34% {
+    transform: translateX(9px) scale(0.99, 0.965);
+  }
+
+  46% {
+    transform: translateX(-6px) scale(0.985, 0.97);
+  }
+
+  57% {
+    opacity: 0.96;
+    transform: translateX(3px) scale(0.985, 0.97);
+  }
+
   100% {
     opacity: 0;
     filter: blur(3px);
+    transform: translateX(0) scale(0.94, 0.98);
+  }
+}
+
+@keyframes ink-dissipate {
+  0%,
+  24% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    filter: blur(2px);
+    transform: translateY(-4px) scale(1.015, 0.965);
+  }
+}
+
+@keyframes surface-return {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
   }
 }
 
@@ -292,6 +367,7 @@ button {
 .recognizer-gate {
   top: 48%;
   transform: translateY(-50%);
+  animation: gate-arrive 280ms ease-out both;
 }
 
 .recognizer-gate span,
@@ -314,7 +390,35 @@ button {
   width: 100%;
   height: 2px;
   border: 0;
+  overflow: hidden;
+  border-radius: 999px;
   accent-color: #72a8ce;
+  background: rgba(114, 168, 206, 0.1);
+}
+
+.recognizer-gate progress::-webkit-progress-bar {
+  background: rgba(114, 168, 206, 0.1);
+}
+
+.recognizer-gate progress::-webkit-progress-value {
+  background: linear-gradient(90deg, #5f91b5, #d6ad65);
+  transition: width var(--motion-fast) ease;
+}
+
+.recognizer-gate progress::-moz-progress-bar {
+  background: linear-gradient(90deg, #5f91b5, #d6ad65);
+}
+
+@keyframes gate-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-50% + 5px));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(-50%);
+  }
 }
 
 .recognizer-gate button,
@@ -349,42 +453,111 @@ button {
 .committed-result {
   position: absolute;
   z-index: 7;
-  inset: 26% 10% 19%;
-  display: grid;
-  place-content: center;
-  place-items: center;
-  gap: 1.8rem;
+  inset: 0;
   pointer-events: none;
 }
 
 .committed-result output {
+  position: absolute;
+  top: var(--result-center-y, 56%);
+  left: var(--result-center-x, 50%);
+  max-width: calc(100% - 2rem);
   color: #fff2d5;
   font-family:
     Iowan Old Style,
     Baskerville,
     "Times New Roman",
     serif;
-  font-size: clamp(8rem, 42vw, 22rem);
+  font-size: clamp(7rem, 39vw, 20rem);
   font-variant-numeric: lining-nums tabular-nums;
   font-weight: 400;
   letter-spacing: -0.085em;
-  line-height: 0.74;
-  text-shadow: 0 20px 80px rgba(114, 168, 206, 0.22);
-  transform: scale(0.9);
+  line-height: 0.72;
+  text-shadow:
+    0 18px 72px rgba(114, 168, 206, 0.2),
+    0 1px rgba(255, 255, 255, 0.1);
+  transform: translate(-50%, -50%);
   opacity: 0;
-  transition:
-    opacity var(--commit-effect-ms) ease,
-    transform var(--commit-effect-ms) cubic-bezier(0.22, 0.8, 0.24, 1);
+  white-space: nowrap;
 }
 
-.input-committing .committed-result output,
+.input-committing .committed-result output {
+  animation: result-land var(--commit-effect-ms) var(--settle-ease) both;
+}
+
 .input-committed .committed-result output {
   opacity: 1;
-  transform: scale(1);
+  transform: translate(-50%, -50%);
+}
+
+.input-clearing .committed-result output {
+  animation: result-clear var(--clear-effect-ms) ease-in both;
 }
 
 .committed-result button {
+  position: absolute;
+  right: 50%;
+  bottom: calc(var(--safe-bottom) + 8.2rem);
+  opacity: 0;
+  transform: translate(50%, 6px);
+  white-space: nowrap;
   pointer-events: auto;
+}
+
+.input-committed .committed-result button {
+  animation: clear-control-arrive 180ms ease-out both;
+}
+
+.input-clearing .committed-result button {
+  opacity: 0.42;
+  transform: translate(50%, 0);
+}
+
+.committed-result button:disabled {
+  cursor: default;
+}
+
+@keyframes result-land {
+  0%,
+  26% {
+    opacity: 0;
+    transform: translate(-50%, -50%)
+      translate(var(--result-enter-x), var(--result-enter-y)) scale(0.8);
+  }
+
+  66% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(0, 0) scale(1.035);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(0, 0) scale(1);
+  }
+}
+
+@keyframes result-clear {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 7px)) scale(0.965);
+  }
+}
+
+@keyframes clear-control-arrive {
+  from {
+    opacity: 0;
+    transform: translate(50%, 6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(50%, 0);
+  }
 }
 
 .mock-deck {
@@ -477,12 +650,34 @@ button {
   text-transform: uppercase;
 }
 
-.stroke-status span {
+.stroke-status .status-indicator {
+  flex: 0 0 auto;
   width: 0.35rem;
   height: 0.35rem;
   border-radius: 50%;
   background: #72a8ce;
   box-shadow: 0 0 12px rgba(114, 168, 206, 0.45);
+}
+
+.stroke-status .status-copy {
+  animation: status-copy-arrive 160ms ease-out both;
+}
+
+.input-rejecting .status-indicator {
+  background: #d6ad65;
+  box-shadow: 0 0 12px rgba(214, 173, 101, 0.38);
+}
+
+@keyframes status-copy-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .ink-toolbar button {
@@ -524,17 +719,13 @@ button {
 }
 
 .diagnostics {
-  position: absolute;
+  position: fixed;
   z-index: 12;
   top: calc(var(--safe-top) + 0.75rem);
   right: calc(var(--safe-right) + 0.75rem);
-  width: min(
-    25rem,
-    calc(100vw - var(--safe-left) - var(--safe-right) - 1.5rem)
-  );
-  max-height: calc(100% - var(--safe-top) - var(--safe-bottom) - 1.5rem);
-  overflow: auto;
-  padding: 0.9rem;
+  width: fit-content;
+  max-width: calc(100vw - var(--safe-left) - var(--safe-right) - 1.5rem);
+  padding: 0.5rem;
   color: rgba(222, 233, 239, 0.78);
   border: 1px solid rgba(203, 218, 228, 0.14);
   border-radius: 0.75rem;
@@ -551,14 +742,61 @@ button {
   user-select: text;
 }
 
-.diagnostics-heading,
-.diagnostics-heading + div {
+.diagnostics[data-expanded="true"] {
+  width: min(
+    25rem,
+    calc(100vw - var(--safe-left) - var(--safe-right) - 1.5rem)
+  );
+}
+
+.diagnostics-summary {
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.diagnostics-summary > div {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.diagnostics-summary strong {
+  color: #d6ad65;
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.diagnostics-summary span {
+  color: rgba(203, 218, 228, 0.42);
+  font-size: 0.48rem;
+  white-space: nowrap;
+}
+
+.diagnostics .diagnostics-summary button {
+  min-height: 2rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.56rem;
+}
+
+.diagnostics-inspector {
+  max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 5.25rem);
+  overflow: auto;
+  margin-top: 0.55rem;
+  padding: 0.65rem 0.4rem 0.4rem;
+  border-top: 1px solid rgba(203, 218, 228, 0.1);
+  overscroll-behavior: contain;
+}
+
+.diagnostics-inspector[hidden] {
+  display: none;
 }
 
 .diagnostics-heading {
+  display: flex;
   align-items: baseline;
+  justify-content: space-between;
   margin-bottom: 0.65rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -699,6 +937,35 @@ button {
   .range-label {
     display: none;
   }
+
+  .ink-header {
+    right: calc(var(--safe-right) + 1rem);
+    left: calc(var(--safe-left) + 1rem);
+  }
+
+  .ink-header h1 {
+    font-size: clamp(2rem, 13vw, 2.6rem);
+  }
+
+  .ink-toolbar,
+  .mock-deck {
+    right: calc(var(--safe-right) + 1rem);
+    left: calc(var(--safe-left) + 1rem);
+  }
+
+  .stroke-status {
+    font-size: 0.52rem;
+    letter-spacing: 0.055em;
+  }
+
+  .ink-toolbar button {
+    min-height: 2.75rem;
+    padding-inline: 0.8rem;
+  }
+
+  .committed-result output {
+    font-size: clamp(6.4rem, 39vw, 8rem);
+  }
 }
 
 @media (orientation: landscape) and (max-height: 560px) {
@@ -716,8 +983,8 @@ button {
   }
 
   .writing-guide {
-    top: 5.5rem;
-    bottom: 5rem;
+    top: calc(var(--safe-top) + 5.5rem);
+    bottom: calc(var(--safe-bottom) + 4.7rem);
   }
 
   .raster-preview {
@@ -725,13 +992,47 @@ button {
     bottom: calc(var(--safe-bottom) + 1.2rem);
     left: 35%;
   }
+
+  .committed-result output {
+    font-size: clamp(5rem, 40vh, 10rem);
+  }
+
+  .committed-result button {
+    right: calc(var(--safe-right) + 1.2rem);
+    bottom: calc(var(--safe-bottom) + 1.1rem);
+    transform: translate(0, 6px);
+  }
+
+  .input-committed .committed-result button {
+    animation-name: clear-control-arrive-landscape;
+  }
+
+  .input-clearing .committed-result button {
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes clear-control-arrive-landscape {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 520px) {
-  .diagnostics {
+  .diagnostics[data-expanded="true"] {
     top: auto;
     bottom: calc(var(--safe-bottom) + 0.75rem);
-    max-height: min(66%, 37rem);
+    width: calc(100vw - var(--safe-left) - var(--safe-right) - 1.5rem);
+  }
+
+  .diagnostics-inspector {
+    max-height: min(58dvh, 35rem);
   }
 
   .inference-notice {
@@ -741,24 +1042,85 @@ button {
 
 @media (prefers-reduced-motion: reduce) {
   :root {
-    --motion-fast: 0ms;
-    --commit-effect-ms: 0ms;
-    --reject-effect-ms: 0ms;
-    --clear-effect-ms: 0ms;
+    --motion-fast: 80ms;
   }
 
-  .ink-shell {
-    --commit-effect-ms: 0ms !important;
-    --reject-effect-ms: 0ms !important;
-    --clear-effect-ms: 0ms !important;
+  .input-committed .committed-result button {
+    animation-name: clear-control-opacity-only;
+    transform: translate(50%, 0);
   }
 
-  *,
-  *::before,
-  *::after {
+  .recognizer-gate,
+  .status-copy {
+    animation: none;
+  }
+
+  * {
     scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
+  }
+}
+
+.input-committing[data-motion="reduced"] .ink-canvas,
+.input-rejecting[data-motion="reduced"][data-ink-effect="invalid"] .ink-canvas,
+.input-rejecting[data-motion="reduced"][data-ink-effect="dissipate"]
+  .ink-canvas {
+  animation-name: ink-opacity-only;
+}
+
+.input-committing[data-motion="reduced"] .committed-result output {
+  animation-name: result-opacity-only;
+}
+
+.input-clearing[data-motion="reduced"] .committed-result output {
+  animation-name: result-clear-opacity-only;
+}
+
+@media (prefers-reduced-motion: reduce) and (orientation: landscape) and (max-height: 560px) {
+  .input-committed .committed-result button {
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes ink-opacity-only {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes result-opacity-only {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes result-clear-opacity-only {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes clear-control-opacity-only {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
   }
 }

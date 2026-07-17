@@ -12,10 +12,13 @@ import {
   BASE_QUIET_MS,
   CLEAR_EFFECT_MS,
   COMMIT_EFFECT_MS,
+  DISSIPATION_EFFECT_MS,
+  effectDurations,
   initialFlowDiagnostics,
   PREFIX_COMMIT_MS,
   RecognitionFlow,
   REJECTION_DEADLINE_MS,
+  REJECTION_EFFECT_MS,
 } from "./recognition-flow";
 import type { FlowDiagnostics, RecognitionRuntime } from "./recognition-flow";
 import { initialVoteInputState, voteInputReducer } from "./recognition-state";
@@ -111,9 +114,11 @@ interface Harness {
     raster: RasterizedInk | null;
     rasterError: Error | null;
     clears: number;
+    restores: number;
   };
   setDeck(deck: readonly number[]): void;
   setThreshold(threshold: number): void;
+  setReducedMotion(reduced: boolean): void;
   setStatus(status: RecognizerStatus): void;
   setRecognition(
     handler: (
@@ -126,11 +131,15 @@ interface Harness {
 
 const activeFlows: RecognitionFlow[] = [];
 
-function createHarness(deck: readonly number[] = [1, 2, 3, 5, 8, 13]): Harness {
+function createHarness(
+  deck: readonly number[] = [1, 2, 3, 5, 8, 13],
+  initialReducedMotion = false,
+): Harness {
   let state = initialVoteInputState;
   let status = readyStatus;
   let numericDeck = deck;
   let confidenceThreshold = 0.9;
+  let reducedMotion = initialReducedMotion;
   let diagnostics = initialFlowDiagnostics;
   let recognizeHandler = async (_input: RecognitionInput, revision: number) =>
     recognition("5", 0.99, revision);
@@ -146,6 +155,7 @@ function createHarness(deck: readonly number[] = [1, 2, 3, 5, 8, 13]): Harness {
     raster: raster() as RasterizedInk | null,
     rasterError: null as Error | null,
     clears: 0,
+    restores: 0,
   };
   let revision = 0;
   const runtime: RecognitionRuntime = {
@@ -173,12 +183,18 @@ function createHarness(deck: readonly number[] = [1, 2, 3, 5, 8, 13]): Harness {
     getLatestPointTime: () => ink.latest,
     getStats: () => ({ strokeCount: ink.strokes, pointCount: ink.points }),
     getStrokes: () => [],
+    getVisualBounds: () => null,
+    getCanonicalInkLocus: () => null,
     rasterize: () => {
       if (ink.rasterError) {
         throw ink.rasterError;
       }
       return ink.raster;
     },
+    restoreVectorInk: () => {
+      ink.restores += 1;
+    },
+    focus: vi.fn(),
     clear: () => {
       ink.clears += 1;
       ink.strokes = 0;
@@ -195,6 +211,7 @@ function createHarness(deck: readonly number[] = [1, 2, 3, 5, 8, 13]): Harness {
     getConfidenceThreshold: () => confidenceThreshold,
     getNumericDeck: () => numericDeck,
     getInk: () => inkHandle,
+    getReducedMotion: () => reducedMotion,
     onDiagnostics: (patch) => {
       diagnostics = { ...diagnostics, ...patch };
     },
@@ -223,6 +240,9 @@ function createHarness(deck: readonly number[] = [1, 2, 3, 5, 8, 13]): Harness {
     setThreshold(next) {
       confidenceThreshold = next;
       flow.recognitionConfigurationChanged();
+    },
+    setReducedMotion(next) {
+      reducedMotion = next;
     },
     setStatus(next) {
       status = next;
@@ -384,6 +404,99 @@ describe("recognition timing", () => {
     },
   );
 
+  it("uses a shorter soft dissipation than the invalid shake", async () => {
+    const invalid = createHarness([5]);
+    invalid.setRecognition(async (_input, revision) =>
+      recognition("4", 0.99, revision),
+    );
+    invalid.draw();
+    await vi.advanceTimersByTimeAsync(REJECTION_DEADLINE_MS);
+    expect(invalid.state).toMatchObject({
+      status: "rejecting",
+      rejection: "invalid",
+    });
+    await vi.advanceTimersByTimeAsync(DISSIPATION_EFFECT_MS);
+    expect(invalid.state.status).toBe("rejecting");
+    await vi.advanceTimersByTimeAsync(
+      REJECTION_EFFECT_MS - DISSIPATION_EFFECT_MS,
+    );
+    expect(invalid.state.status).toBe("empty");
+
+    vi.setSystemTime(0);
+    const unclaimed = createHarness([5]);
+    unclaimed.setRecognition(async (_input, revision) =>
+      recognition("5", 0.5, revision),
+    );
+    unclaimed.draw();
+    await vi.advanceTimersByTimeAsync(
+      REJECTION_DEADLINE_MS + DISSIPATION_EFFECT_MS,
+    );
+    expect(unclaimed.state.status).toBe("empty");
+  });
+
+  it("uses deterministic opacity-only timing for reduced motion", async () => {
+    const harness = createHarness([5], true);
+    harness.draw();
+    await vi.advanceTimersByTimeAsync(BASE_QUIET_MS);
+    expect(harness.state.status).toBe("committing");
+
+    const reduced = effectDurations(true);
+    await vi.advanceTimersByTimeAsync(reduced.commit - 1);
+    expect(harness.state.status).toBe("committing");
+    await vi.advanceTimersByTimeAsync(1);
+    expect(harness.state.status).toBe("committed");
+
+    harness.flow.clear();
+    await vi.advanceTimersByTimeAsync(reduced.clear);
+    expect(harness.state.status).toBe("empty");
+  });
+
+  it("keeps full motion timing when preference changes to reduced mid-effect", async () => {
+    const harness = createHarness([5], false);
+    harness.draw();
+    await vi.advanceTimersByTimeAsync(BASE_QUIET_MS);
+    expect(harness.state).toMatchObject({
+      status: "committing",
+      effectMotion: "full",
+    });
+
+    harness.setReducedMotion(true);
+    await vi.advanceTimersByTimeAsync(effectDurations(true).commit);
+    expect(harness.state.status).toBe("committing");
+    await vi.advanceTimersByTimeAsync(
+      COMMIT_EFFECT_MS - effectDurations(true).commit,
+    );
+    expect(harness.state.status).toBe("committed");
+
+    harness.flow.clear();
+    expect(harness.state.effectMotion).toBe("reduced");
+    await vi.advanceTimersByTimeAsync(effectDurations(true).clear);
+    expect(harness.state.status).toBe("empty");
+  });
+
+  it("keeps reduced timing when preference changes to full mid-effect", async () => {
+    const harness = createHarness([5], true);
+    harness.draw();
+    await vi.advanceTimersByTimeAsync(BASE_QUIET_MS);
+    expect(harness.state).toMatchObject({
+      status: "committing",
+      effectMotion: "reduced",
+    });
+
+    harness.setReducedMotion(false);
+    await vi.advanceTimersByTimeAsync(effectDurations(true).commit);
+    expect(harness.state.status).toBe("committed");
+
+    harness.flow.clear();
+    expect(harness.state.effectMotion).toBe("full");
+    await vi.advanceTimersByTimeAsync(effectDurations(true).clear);
+    expect(harness.state.status).toBe("clearing");
+    await vi.advanceTimersByTimeAsync(
+      CLEAR_EFFECT_MS - effectDurations(true).clear,
+    );
+    expect(harness.state.status).toBe("empty");
+  });
+
   it("treats a trivially small raster as unclaimed without invoking the model", async () => {
     const harness = createHarness();
     harness.ink.raster = null;
@@ -434,6 +547,7 @@ describe("cancellation and guards", () => {
     expect(harness.state).toMatchObject({ status: "drawing", revision: 2 });
     expect(vi.getTimerCount()).toBe(0);
     expect(harness.ink.clears).toBe(0);
+    expect(harness.ink.restores).toBe(2);
   });
 
   it.each(["committing", "rejecting"])(
@@ -453,6 +567,7 @@ describe("cancellation and guards", () => {
       harness.flow.pointerAccepted();
       expect(harness.state.status).toBe("drawing");
       expect(harness.ink.clears).toBe(0);
+      expect(harness.ink.restores).toBe(2);
       expect(vi.getTimerCount()).toBe(0);
     },
   );
@@ -520,7 +635,11 @@ describe("clear and runtime failures", () => {
     expect(harness.state.status).toBe("committed");
 
     expect(harness.flow.clear()).toBe(2);
-    expect(harness.state).toMatchObject({ status: "clearing", revision: 2 });
+    expect(harness.state).toMatchObject({
+      status: "clearing",
+      revision: 2,
+      value: 5,
+    });
     expect(harness.invalidations).toEqual([1, 2]);
     await vi.advanceTimersByTimeAsync(CLEAR_EFFECT_MS);
     expect(harness.state).toEqual({ ...initialVoteInputState, revision: 2 });
@@ -533,6 +652,19 @@ describe("clear and runtime failures", () => {
     harness.flow.strokeCompleted();
     await vi.advanceTimersByTimeAsync(BASE_QUIET_MS);
     expect(harness.state).toMatchObject({ status: "committing", revision: 3 });
+  });
+
+  it("revision-guards clear completion when drawing resumes", async () => {
+    const harness = createHarness();
+    harness.draw();
+    await vi.advanceTimersByTimeAsync(BASE_QUIET_MS + COMMIT_EFFECT_MS);
+    harness.flow.clear();
+    expect(harness.state).toMatchObject({ status: "clearing", revision: 2 });
+
+    harness.flow.pointerAccepted();
+    expect(harness.state).toMatchObject({ status: "drawing", revision: 3 });
+    await vi.advanceTimersByTimeAsync(CLEAR_EFFECT_MS);
+    expect(harness.state).toMatchObject({ status: "drawing", revision: 3 });
   });
 
   it("preserves ink on inference failure and retries after runtime recovery", async () => {

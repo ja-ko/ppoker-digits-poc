@@ -4,11 +4,12 @@ import {
   appendOrderedPoints,
   canonicalPointToViewport,
   coalescedPointerEvents,
+  fitCoordinateSpace,
   isPrimaryPointerStart,
   pointFromPointerEvent,
   pointsFromPointerEvent,
-  resizeTransform,
   strokeToViewport,
+  transformCoordinatePoint,
   viewportPointToCanonical,
 } from "./capture";
 import { rasterizeInk } from "./rasterize";
@@ -110,7 +111,7 @@ describe("pointer capture utilities", () => {
         { x: 300, y: 600, time: 2, pressure: 0.7 },
       ],
     };
-    const transform = resizeTransform(
+    const transform = fitCoordinateSpace(
       { width: 300, height: 600 },
       { width: 800, height: 400 },
     );
@@ -142,14 +143,14 @@ describe("pointer capture utilities", () => {
     const originalPoints = stroke.points.map((point) => ({ ...point }));
     const rasterBefore = rasterizeInk([stroke]);
 
-    const landscapeTransform = resizeTransform(canonicalSurface, {
+    const landscapeTransform = fitCoordinateSpace(canonicalSurface, {
       width: 800,
       height: 400,
     });
     expect(strokeToViewport(stroke, landscapeTransform).points).not.toEqual(
       originalPoints,
     );
-    const returnedTransform = resizeTransform(
+    const returnedTransform = fitCoordinateSpace(
       canonicalSurface,
       canonicalSurface,
     );
@@ -164,7 +165,7 @@ describe("pointer capture utilities", () => {
   });
 
   it("keeps a letterbox stroke under the pointer when it completes", () => {
-    const transform = resizeTransform(
+    const transform = fitCoordinateSpace(
       { width: 300, height: 600 },
       { width: 800, height: 400 },
     );
@@ -194,7 +195,27 @@ describe("pointer capture utilities", () => {
 
   it("rejects degenerate resize surfaces", () => {
     expect(() =>
-      resizeTransform({ width: 0, height: 100 }, { width: 100, height: 100 }),
+      fitCoordinateSpace(
+        { width: 0, height: 100 },
+        { width: 100, height: 100 },
+      ),
     ).toThrow(RangeError);
+  });
+
+  it("maps an off-center canonical locus with the same portrait-to-landscape fit", () => {
+    const transform = fitCoordinateSpace(
+      { width: 390, height: 844 },
+      { width: 653, height: 280 },
+    );
+
+    expect(transform).toEqual({
+      scale: 280 / 844,
+      offsetX: (653 - 390 * (280 / 844)) / 2,
+      offsetY: 0,
+    });
+    expect(transformCoordinatePoint({ x: 72, y: 510 }, transform)).toEqual({
+      x: 72 * (280 / 844) + (653 - 390 * (280 / 844)) / 2,
+      y: 510 * (280 / 844),
+    });
   });
 });

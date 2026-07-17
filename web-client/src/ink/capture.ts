@@ -13,6 +13,11 @@ export interface UniformTransform {
   offsetY: number;
 }
 
+export interface CoordinatePoint {
+  x: number;
+  y: number;
+}
+
 type PointerStart = Pick<
   PointerEvent,
   "button" | "isPrimary" | "pointerId" | "pointerType"
@@ -95,7 +100,7 @@ export function appendOrderedPoints(
   return added;
 }
 
-export function resizeTransform(
+export function fitCoordinateSpace(
   source: LogicalSurface,
   target: LogicalSurface,
 ): UniformTransform {
@@ -119,14 +124,24 @@ export function resizeTransform(
   };
 }
 
+export function transformCoordinatePoint(
+  point: CoordinatePoint,
+  transform: UniformTransform,
+): CoordinatePoint {
+  return {
+    x: point.x * transform.scale + transform.offsetX,
+    y: point.y * transform.scale + transform.offsetY,
+  };
+}
+
 export function canonicalPointToViewport(
   point: InkPoint,
   transform: UniformTransform,
 ): InkPoint {
+  const mapped = transformCoordinatePoint(point, transform);
   return {
     ...point,
-    x: point.x * transform.scale + transform.offsetX,
-    y: point.y * transform.scale + transform.offsetY,
+    ...mapped,
   };
 }
 

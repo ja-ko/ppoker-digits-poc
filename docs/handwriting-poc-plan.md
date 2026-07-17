@@ -356,11 +356,11 @@ Vote input, enabled only while the recognizer is ready
 ## Animation Plan
 
 - [x] Keep the original vector trace until its transition completes.
-- [ ] On commit, subtly tighten or scale the trace toward the result's center.
-- [ ] Crossfade the trace into a clean typeset number.
-- [ ] Add a restrained landing scale/easing to the typeset result.
-- [ ] On invalid input, shake the trace horizontally and then fade it.
-- [ ] On low confidence, fade or disperse without a shake.
+- [x] On commit, subtly tighten or scale the trace toward the result's center.
+- [x] Crossfade the trace into a clean typeset number.
+- [x] Add a restrained landing scale/easing to the typeset result.
+- [x] On invalid input, shake the trace horizontally and then fade it.
+- [x] On low confidence, fade or disperse without a shake.
 - [x] On clear, remove the committed number and restore the drawing surface.
 - [x] Ensure animations cannot complete against a newer drawing revision.
 - [x] Provide a reduced-motion variant.
@@ -465,7 +465,7 @@ ml/digits/
 - [x] Implement CTC decoding and confidence diagnostics.
 - [x] Implement finish detection and the interaction reducer.
 - [x] Implement recognizer retry, crash, and timeout handling.
-- [ ] Implement commit, rejection, and clear animations.
+- [x] Implement commit, rejection, and clear animations.
 - [x] Add the mock deck and diagnostic controls.
 
 ### Verification

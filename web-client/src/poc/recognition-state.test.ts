@@ -5,6 +5,7 @@ import {
   classifyRecognition,
   initialRecognizerStatus,
   initialVoteInputState,
+  rejectionAnimation,
   recognizerReducer,
   voteInputReducer,
 } from "./recognition-state";
@@ -35,6 +36,7 @@ describe("vote input reducer", () => {
       type: "BEGIN_COMMIT",
       revision: 1,
       value: 13,
+      effectMotion: "full",
     });
     expect(committing).toMatchObject({ status: "committing", value: 13 });
 
@@ -44,11 +46,16 @@ describe("vote input reducer", () => {
     });
     expect(committed).toMatchObject({ status: "committed", value: 13 });
 
-    const clearing = reduce(committed, { type: "CLEAR", revision: 2 });
+    const clearing = reduce(committed, {
+      type: "CLEAR",
+      revision: 2,
+      effectMotion: "reduced",
+    });
     expect(clearing).toMatchObject({
       status: "clearing",
       revision: 2,
-      value: null,
+      value: 13,
+      effectMotion: "reduced",
     });
     expect(reduce(clearing, { type: "EFFECT_COMPLETED", revision: 2 })).toEqual(
       { ...initialVoteInputState, revision: 2 },
@@ -65,6 +72,7 @@ describe("vote input reducer", () => {
       type: "BEGIN_REJECTION",
       revision: 1,
       rejection: "invalid",
+      effectMotion: "full",
     });
     expect(rejecting).toMatchObject({
       status: "rejecting",
@@ -109,11 +117,17 @@ describe("vote input reducer", () => {
     );
     const states = [
       base,
-      reduce(base, { type: "BEGIN_COMMIT", revision: 1, value: 5 }),
+      reduce(base, {
+        type: "BEGIN_COMMIT",
+        revision: 1,
+        value: 5,
+        effectMotion: "full",
+      }),
       reduce(base, {
         type: "BEGIN_REJECTION",
         revision: 1,
         rejection: "unclaimed",
+        effectMotion: "reduced",
       }),
     ];
     for (const state of states) {
@@ -123,6 +137,7 @@ describe("vote input reducer", () => {
         value: null,
         rejection: null,
         inferenceError: null,
+        effectMotion: null,
       });
     }
   });
@@ -132,7 +147,12 @@ describe("vote input reducer", () => {
       initialVoteInputState,
       { type: "POINTER_ACCEPTED", revision: 1 },
       { type: "STROKE_COMPLETED", revision: 1 },
-      { type: "BEGIN_COMMIT", revision: 1, value: 8 },
+      {
+        type: "BEGIN_COMMIT",
+        revision: 1,
+        value: 8,
+        effectMotion: "full",
+      },
       { type: "EFFECT_COMPLETED", revision: 1 },
     );
     expect(reduce(committed, { type: "EFFECT_COMPLETED", revision: 0 })).toBe(
@@ -186,6 +206,12 @@ describe("recognizer reducer", () => {
 });
 
 describe("recognition disposition", () => {
+  it("maps only deck-invalid input to the shake choreography", () => {
+    expect(rejectionAnimation("invalid")).toBe("invalid");
+    expect(rejectionAnimation("incomplete")).toBe("dissipate");
+    expect(rejectionAnimation("unclaimed")).toBe("dissipate");
+  });
+
   it.each([
     ["5", 0.95, [1, 5, 13], { type: "commit", value: 5, delay: "base" }],
     ["1", 0.95, [1, 13], { type: "commit", value: 1, delay: "prefix" }],

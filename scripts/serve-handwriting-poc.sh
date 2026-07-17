@@ -60,6 +60,7 @@ fi
 printf 'Building the handwriting POC and preparing self-hosted ORT assets...\n'
 npm --prefix "$web_dir" run build
 
-printf 'Starting the handwriting POC on the LAN; use a Network URL printed by Vite on the phone.\n'
+printf 'Starting the handwriting POC on the LAN; scan the QR code from your phone.\n'
 cd -- "$web_dir"
+export PPOKER_PRINT_PHONE_QR=1
 exec "$web_dir/node_modules/.bin/vite" preview --host 0.0.0.0 "$@"

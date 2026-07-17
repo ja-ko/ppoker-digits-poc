@@ -34,9 +34,10 @@ a current browser with JavaScript, Web Workers, and WebAssembly enabled.
 
 The launcher installs the locked dependencies when necessary, prepares the
 self-hosted ONNX Runtime and legal assets, builds the POC, and starts a production
-Vite preview on `0.0.0.0`. Open the printed **Network** URL on a phone connected to
-the same LAN. Use `?diagnostics=1` for model state, raster inspection, mock-deck and
-threshold controls, timings, and the repeatable browser benchmark.
+Vite preview on `0.0.0.0`. Scan the printed QR code from a phone connected to the
+same LAN, or open the printed **Network** URL. Use `?diagnostics=1` for model state,
+raster inspection, mock-deck and threshold controls, timings, and the repeatable
+browser benchmark.
 
 Use another port with:
 

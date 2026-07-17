@@ -45,7 +45,7 @@ async function stopLauncher(child) {
   await withTimeout(exited, 3_000, "launcher SIGKILL shutdown");
 }
 
-async function waitForUrl(child, output, timeoutMs = 45_000) {
+async function waitForUrl(child, output, expectPhoneQr, timeoutMs = 45_000) {
   let cancel = () => {};
   const waiting = new Promise((resolve, reject) => {
     const inspect = (chunk) => {
@@ -53,7 +53,13 @@ async function waitForUrl(child, output, timeoutMs = 45_000) {
       const match = output.value.match(
         /http:\/\/(?:localhost|127\.0\.0\.1):(\d+)\//,
       );
-      if (!match) return;
+      if (
+        !match ||
+        (expectPhoneQr &&
+          (!output.value.includes("Scan this QR code to open http://") ||
+            !output.value.includes("\u001b[97;40m")))
+      )
+        return;
       cleanup();
       resolve({
         origin: `http://127.0.0.1:${match[1]}`,
@@ -101,6 +107,7 @@ async function exerciseLauncher(
   cwd,
   args,
   expectedOccupiedPort = null,
+  expectPhoneQr = true,
 ) {
   const child = spawn(script, args, {
     cwd,
@@ -110,8 +117,21 @@ async function exerciseLauncher(
   const output = { value: "" };
   let origin;
   try {
-    const started = await waitForUrl(child, output);
+    const started = await waitForUrl(child, output, expectPhoneQr);
     origin = started.origin;
+    if (expectPhoneQr) {
+      assert(
+        /Scan this QR code to open http:\/\/(?!127\.0\.0\.1|localhost)[^\s]+ on your phone:/.test(
+          output.value,
+        ),
+        "launcher did not print a LAN URL for the phone QR code",
+      );
+      assert(
+        output.value.includes("\u001b[97;40m") &&
+          (output.value.includes("\u2580") || output.value.includes("\u2584")),
+        "launcher did not print compact QR terminal data",
+      );
+    }
     if (expectedOccupiedPort !== null) {
       assert(
         started.port !== expectedOccupiedPort,
@@ -235,6 +255,7 @@ try {
     spaceRoot,
     ["--host", "127.0.0.1", "--port", String(occupied.port)],
     occupied.port,
+    false,
   );
   console.log(
     "Root launcher smoke passed (repository root, path with spaces, occupied-port fallback, assets, and SIGTERM cleanup).",

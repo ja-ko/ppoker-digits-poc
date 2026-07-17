@@ -30,6 +30,9 @@ test("production root loads the real worker and model", async ({
   await expect(readyPage.getByText("Preparing local recognition")).toHaveCount(
     0,
   );
+  await expect(
+    readyPage.getByRole("link", { name: "Notices", exact: true }),
+  ).toHaveAttribute("href", "/legal/THIRD_PARTY_NOTICES.txt");
 });
 
 for (const value of ["1", "2", "3", "5", "8", "13"] as const) {

@@ -1,16 +1,23 @@
 # Third-party model notice
 
-The CRNN Tiny architecture in `model.py` and the initial weights used to produce
-the distributed ONNX model are adapted from
+The CRNN Tiny architecture in `model.py` is adapted from
 [`zjykzj/crnn-ctc`](https://github.com/zjykzj/crnn-ctc) release `v1.3.0`, commit
 `aeceea3a2ab7e973b40d871ff628b327df31a045`, by zjykzj. The upstream work is
-licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
-and is copyright 2023 zjykzj.
+licensed under the Apache License 2.0 and is copyright 2023 zjykzj. The full
+license is tracked at `../../third_party/licenses/Apache-2.0.txt`; web
+distributions place the same text beside this notice as `APACHE-2.0.txt`.
 
-The local derivative changes the input width from 160 to 128, composes canonical
-one-to-three-digit labels, fine-tunes the published `crnn_tiny-emnist.pth`
-weights, and exports a static batch-one ONNX graph. No upstream source files or
-unmodified checkpoint are redistributed.
+The recorded intended initialization reference is the published
+`crnn_tiny-emnist.pth` checkpoint from that release, SHA-256
+`6d2a653513fd71f9d5de1fc238311dc017d285f0bbc55e09da7ed9eea80479c9`.
+A retained checkpoint at the reported path matched that checksum after the run,
+but no checksum was captured at training start, so pre-training binary checkpoint
+lineage is not independently established.
+
+The recorded derivative changes the input width from 160 to 128, composes
+canonical one-to-three-digit labels, reports fine-tuning from that intended
+initialization reference, and exports a static batch-one ONNX graph. No upstream
+source files or unmodified checkpoint are redistributed.
 
 Training glyphs come from EMNIST Digits, derived from NIST Special Database 19:
 G. Cohen, S. Afshar, J. Tapson, and A. van Schaik, "EMNIST: an extension of

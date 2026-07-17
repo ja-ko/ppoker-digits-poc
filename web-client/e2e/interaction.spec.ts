@@ -309,6 +309,70 @@ test("diagnostics collapse, expand, avoid clear, and cancel benchmark", async ({
   await expect(run).toBeVisible();
 });
 
+test("normal notices link stays accessible at 280px with diagnostics and clear", async ({
+  readyPage,
+}) => {
+  await readyPage.setViewportSize({ width: 280, height: 653 });
+  const notices = readyPage.getByRole("link", { name: "Notices", exact: true });
+  await expect(notices).toBeVisible();
+  await expect(notices).toHaveAttribute(
+    "href",
+    "/legal/THIRD_PARTY_NOTICES.txt",
+  );
+  await notices.focus();
+  await expect(notices).toBeFocused();
+
+  const href = await notices.getAttribute("href");
+  const response = await readyPage.request.get(href!);
+  expect(response.ok()).toBe(true);
+  expect(await response.text()).toContain("ppoker handwriting POC");
+
+  await drawCard(readyPage, "5");
+  await expect(shell(readyPage)).toHaveAttribute(
+    "data-input-state",
+    "committing",
+  );
+  await expect(shell(readyPage)).toHaveAttribute(
+    "data-input-state",
+    "committed",
+  );
+  const clear = readyPage.getByRole("button", { name: "Clear and try again" });
+  const diagnostics = readyPage.getByRole("complementary", {
+    name: "Recognition diagnostics",
+  });
+  await diagnostics.getByRole("button", { name: "Inspect" }).click();
+  await expect(diagnostics).toHaveAttribute("data-expanded", "true");
+  const [noticesBox, clearBox, diagnosticsBox] = await Promise.all([
+    notices.boundingBox(),
+    clear.boundingBox(),
+    diagnostics.boundingBox(),
+  ]);
+  expect(noticesBox).not.toBeNull();
+  expect(clearBox).not.toBeNull();
+  expect(diagnosticsBox).not.toBeNull();
+  expect(noticesBox!.x).toBeGreaterThanOrEqual(0);
+  expect(noticesBox!.y).toBeGreaterThanOrEqual(0);
+  expect(noticesBox!.x + noticesBox!.width).toBeLessThanOrEqual(280);
+  expect(noticesBox!.y + noticesBox!.height).toBeLessThanOrEqual(653);
+  for (const other of [clearBox!, diagnosticsBox!]) {
+    expect(
+      noticesBox!.x + noticesBox!.width <= other.x ||
+        other.x + other.width <= noticesBox!.x ||
+        noticesBox!.y + noticesBox!.height <= other.y ||
+        other.y + other.height <= noticesBox!.y,
+    ).toBe(true);
+  }
+
+  const dimensions = await readyPage.evaluate(() => ({
+    innerWidth,
+    innerHeight,
+    documentWidth: document.documentElement.scrollWidth,
+    documentHeight: document.documentElement.scrollHeight,
+  }));
+  expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.innerWidth);
+  expect(dimensions.documentHeight).toBeLessThanOrEqual(dimensions.innerHeight);
+});
+
 test("reduced motion commit uses stable opacity-only keyframes", async ({
   readyPage,
 }) => {

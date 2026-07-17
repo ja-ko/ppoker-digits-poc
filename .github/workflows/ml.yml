@@ -1,0 +1,47 @@
+name: ML
+
+on:
+  push:
+    paths:
+      - "ml/**"
+      - "web-client/public/models/**"
+      - "web-client/legal/THIRD_PARTY_NOTICES.txt"
+      - "web-client/scripts/copy-legal-assets.mjs"
+      - "web-client/scripts/server-smoke.mjs"
+      - "web-client/src/recognition/types.ts"
+      - ".github/workflows/ml.yml"
+  pull_request:
+    paths:
+      - "ml/**"
+      - "web-client/public/models/**"
+      - "web-client/legal/THIRD_PARTY_NOTICES.txt"
+      - "web-client/scripts/copy-legal-assets.mjs"
+      - "web-client/scripts/server-smoke.mjs"
+      - "web-client/src/recognition/types.ts"
+      - ".github/workflows/ml.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: ml/digits
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12.10"
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.11.28"
+          enable-cache: true
+          cache-dependency-glob: ml/digits/uv.lock
+      - name: Install locked ML dependencies
+        run: uv sync --frozen
+      - name: Run ML unit tests
+        run: uv run pytest
+      - name: Verify committed manifests, reports, metadata, and model
+        run: uv run python verify.py

@@ -246,6 +246,12 @@ describe("RecognitionPad integration", () => {
     const draw = container.querySelector<HTMLButtonElement>(
       '[aria-label="Draw test stroke"]',
     );
+    const notices = container.querySelector<HTMLAnchorElement>(".notices-link");
+    expect(notices?.textContent).toBe("Notices");
+    expect(notices?.getAttribute("href")).toBe(
+      "/legal/THIRD_PARTY_NOTICES.txt",
+    );
+    expect(container.querySelector(".diagnostics")).toBeNull();
     expect(draw?.disabled).toBe(false);
     act(() => draw?.click());
     expect(invalidations).toEqual([1]);

@@ -17,13 +17,24 @@ or retained.
   NIST-hosted EMNIST archive, or each extracted Digits file. Corrupt/missing raw
   files are replaced atomically. Downloads, data, caches, and `.pth` files stay
   below ignored `artifacts/`.
-- `NOTICE.md` records CRNN Apache-2.0 attribution and EMNIST provenance.
+- `NOTICE.md` records CRNN Apache-2.0 attribution, its checkpoint-lineage
+  boundary, and EMNIST provenance; the full license is tracked at
+  `../../third_party/licenses/Apache-2.0.txt`.
 
 ```sh
 uv sync --frozen
+uv run pytest
+uv run python verify.py
+```
+
+Those are the clean-checkout CI checks. They validate unit behavior, committed
+manifest/report lineage and hashes, model metadata, ONNX structure, and exact
+model bytes without training or downloading EMNIST/the upstream checkpoint.
+Dataset-backed manifest regeneration is a separate, explicit check:
+
+```sh
 uv run python download.py all
 uv run python freeze.py --verify
-uv run pytest
 ```
 
 The official EMNIST train glyphs are the only training source. Official test

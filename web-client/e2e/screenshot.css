@@ -10,6 +10,7 @@
 .identity,
 .range-label,
 .mock-deck span,
-.stroke-status {
+.stroke-status,
+.notices-link {
   font-family: "Liberation Mono", monospace !important;
 }

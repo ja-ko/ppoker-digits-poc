@@ -197,9 +197,25 @@ try {
   const copiedLauncher = join(spaceRoot, "scripts", "serve-handwriting-poc.sh");
   await copyFile(launcher, copiedLauncher);
   await chmod(copiedLauncher, 0o755);
+  await copyFile(join(repoRoot, "LICENSE"), join(spaceRoot, "LICENSE"));
+  await mkdir(join(spaceRoot, "ml", "digits"), { recursive: true });
+  await copyFile(
+    join(repoRoot, "ml", "digits", "NOTICE.md"),
+    join(spaceRoot, "ml", "digits", "NOTICE.md"),
+  );
+  await mkdir(join(spaceRoot, "third_party", "licenses"), { recursive: true });
+  await copyFile(
+    join(repoRoot, "third_party", "licenses", "Apache-2.0.txt"),
+    join(spaceRoot, "third_party", "licenses", "Apache-2.0.txt"),
+  );
   const sourceWeb = join(repoRoot, "web-client");
   const copiedWeb = join(spaceRoot, "web-client");
-  const excluded = ["coverage", "dist", join("public", "ort")];
+  const excluded = [
+    "coverage",
+    "dist",
+    join("public", "legal"),
+    join("public", "ort"),
+  ];
   await cp(sourceWeb, copiedWeb, {
     recursive: true,
     verbatimSymlinks: true,

@@ -65,6 +65,10 @@ try {
   assert(stylePath, "built index did not reference a stylesheet asset");
 
   const entry = await (await fetchAsset(entryPath, "text/javascript")).text();
+  assert(
+    entry.includes(`${base}legal/THIRD_PARTY_NOTICES.txt`),
+    "entry asset did not contain the nested-base notices link",
+  );
   await fetchAsset(stylePath, "text/css");
   const workerMatch = entry.match(
     /(?:\/handwriting-poc\/)?assets\/worker-[A-Za-z0-9_-]+\.js/,
@@ -105,8 +109,28 @@ try {
     "application/wasm",
   );
 
+  const legalAssets = new Map([
+    ["EUPL-1.2.txt", "EUROPEAN UNION PUBLIC LICENCE v. 1.2"],
+    ["APACHE-2.0.txt", "Apache License"],
+    ["MIT-REACT.txt", "Meta Platforms, Inc. and affiliates"],
+    ["MIT-ONNX-RUNTIME.txt", "Microsoft Corporation"],
+    ["MIT-NOBLE-HASHES.txt", "Copyright (c) 2022 Paul Miller"],
+    ["MODEL_NOTICE.txt", "aeceea3a2ab7e973b40d871ff628b327df31a045"],
+    ["THIRD_PARTY_NOTICES.txt", "NIST-hosted EMNIST Digits"],
+    [
+      "ONNXRUNTIME-THIRD-PARTY-NOTICES.txt",
+      "THIRD PARTY SOFTWARE NOTICES AND INFORMATION",
+    ],
+  ]);
+  for (const [name, expectedText] of legalAssets) {
+    const contents = await (
+      await fetchAsset(`${base}legal/${name}`, "text/plain")
+    ).text();
+    assert(contents.includes(expectedText), `${name} has unexpected contents`);
+  }
+
   console.log(
-    `Server smoke passed at ${origin}${base} (nested base, entry, CSS, worker, model, and ORT assets).`,
+    `Server smoke passed at ${origin}${base} (nested base, entry, CSS, worker, model, ORT, and legal assets).`,
   );
 } finally {
   const cleanupErrors = [];

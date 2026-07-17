@@ -447,6 +447,8 @@ ml/digits/
 - [x] Pin Python, PyTorch, torchvision, ONNX, and ONNX Runtime versions.
 - [x] Add model and checkpoint attribution notices.
 - [x] Add checksum-verified checkpoint and EMNIST download instructions.
+- [x] Add non-training ML CI for unit tests and clean-checkout verification of
+  committed manifests, reports, metadata, and model bytes.
 - [x] Implement deterministic sequence generation and unit tests.
 - [x] Generate and freeze model-selection, calibration, and final-test composition
   manifests plus a reserve-glyph manifest, documenting pool sizes, composition
@@ -469,6 +471,8 @@ ml/digits/
 - [x] Implement recognizer retry, crash, and timeout handling.
 - [x] Implement commit, rejection, and clear animations.
 - [x] Add the mock deck and diagnostic controls.
+- [x] Include discoverable project, model, runtime, and upstream third-party
+  notices in the built web distribution.
 
 ### Verification
 
@@ -501,8 +505,8 @@ ml/digits/
 - [ ] Product owner tests physical iPhone Safari input and lifecycle.
 - [ ] Product owner tests physical Android Chrome input and lifecycle.
 - [x] Reproducibly smoke-test the production server at a nested base, including
-  the entry, stylesheet, worker, exact model size/hash, and ORT JavaScript/WASM
-  status and MIME types.
+  the entry, stylesheet, worker, exact model size/hash, ORT JavaScript/WASM,
+  and distribution legal assets with expected text and MIME types.
 - [x] In the development browser, record cold load and, after 10 warm-up runs,
   warm inference median and p95 over 100 runs. Record model and end-to-end timings
   separately.

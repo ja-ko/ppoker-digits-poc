@@ -85,7 +85,7 @@ and committed states. A full update, visual-only update, then full update kept
 these Linux baseline SHA-256 values unchanged:
 
 - Empty portrait: `a05a45e11749124a785ae18ac470e92b41dcd369a35a50b5df458e9abaf4481d`
-- Committed five: `91c71c919c7f8487fa7ed97e1b637ab0440d24ec924315949677e455371004bf`
+- Committed five: `bd77f8a5e34282086a3c374ca6fb4d50e7f507a825cdb37b3480861766a1b97b`
 
 ## Limitation
 

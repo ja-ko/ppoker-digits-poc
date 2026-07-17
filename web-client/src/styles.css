@@ -718,6 +718,33 @@ button {
   outline-offset: 3px;
 }
 
+.notices-link {
+  position: absolute;
+  z-index: 6;
+  bottom: calc(var(--safe-bottom) + 0.35rem);
+  left: calc(var(--safe-left) + clamp(1.25rem, 5vw, 3rem));
+  color: rgba(203, 218, 228, 0.38);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-decoration-color: rgba(203, 218, 228, 0.24);
+  text-underline-offset: 0.15rem;
+  text-transform: uppercase;
+  touch-action: manipulation;
+  pointer-events: auto;
+}
+
+.notices-link:hover {
+  color: rgba(242, 237, 224, 0.72);
+}
+
+.notices-link:focus-visible {
+  color: #f5ead3;
+  outline: 2px solid #d6ad65;
+  outline-offset: 3px;
+}
+
 .diagnostics {
   position: fixed;
   z-index: 12;
@@ -933,6 +960,24 @@ button {
   color: rgba(242, 237, 224, 0.72);
 }
 
+.diagnostics-legal {
+  display: block;
+  width: fit-content;
+  margin-top: 0.7rem;
+  color: rgba(203, 218, 228, 0.48);
+  text-underline-offset: 0.16rem;
+}
+
+.diagnostics-legal:hover {
+  color: rgba(242, 237, 224, 0.78);
+}
+
+.diagnostics-legal:focus-visible {
+  color: #f5ead3;
+  outline: 2px solid #d6ad65;
+  outline-offset: 3px;
+}
+
 @media (max-width: 320px) {
   .range-label {
     display: none;
@@ -1027,7 +1072,7 @@ button {
 @media (max-width: 520px) {
   .diagnostics[data-expanded="true"] {
     top: auto;
-    bottom: calc(var(--safe-bottom) + 0.75rem);
+    bottom: calc(var(--safe-bottom) + 1.8rem);
     width: calc(100vw - var(--safe-left) - var(--safe-right) - 1.5rem);
   }
 

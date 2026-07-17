@@ -594,6 +594,13 @@ export function RecognitionPad({
           )}
       </footer>
 
+      <a
+        className="notices-link"
+        href={`${import.meta.env.BASE_URL}legal/THIRD_PARTY_NOTICES.txt`}
+      >
+        Notices
+      </a>
+
       {showDiagnostics && (
         <Diagnostics
           recognizer={recognizer}

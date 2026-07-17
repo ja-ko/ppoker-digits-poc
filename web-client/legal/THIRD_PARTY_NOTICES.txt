@@ -1,0 +1,83 @@
+ppoker handwriting POC - third-party notices
+================================================
+
+This file describes code and model material included in the built web
+distribution. The complete license texts named below are distributed beside
+this file under legal/. Source for ppoker is available at
+https://github.com/ja-ko/ppoker.
+
+Project
+-------
+
+ppoker is licensed under the European Union Public Licence 1.2. See
+EUPL-1.2.txt.
+
+Derived CRNN model and source
+-----------------------------
+
+The CRNN Tiny architecture used by models/digits-crnn.onnx is adapted from
+zjykzj/crnn-ctc by zjykzj:
+
+  Source: https://github.com/zjykzj/crnn-ctc
+  Release: v1.3.0
+  Revision: aeceea3a2ab7e973b40d871ff628b327df31a045
+  Checkpoint: crnn_tiny-emnist.pth
+  Checkpoint SHA-256:
+    6d2a653513fd71f9d5de1fc238311dc017d285f0bbc55e09da7ed9eea80479c9
+  License: Apache-2.0
+  Copyright: 2023 zjykzj
+
+The checkpoint above is the recorded intended initialization reference. A
+retained checkpoint matched the upstream checksum after the run, but no
+checksum was captured at training start, so pre-training binary checkpoint
+lineage is not independently established.
+
+The recorded derivative changes the input width from 160 to 128, composes
+canonical one-to-three-digit labels, reports fine-tuning from that intended
+initialization reference, and exports a static batch-one ONNX graph. See
+APACHE-2.0.txt and MODEL_NOTICE.txt.
+The distributed model SHA-256 is
+bea69199be71c01a35f4485ad853ef6fd11608c616c452598cb3f330922db9af.
+
+Training data note
+------------------
+
+Training glyphs came from NIST-hosted EMNIST Digits, derived from NIST Special
+Database 19. Neither EMNIST nor the upstream checkpoint is included in the web
+distribution. Data and paper references:
+
+  https://www.nist.gov/itl/products-and-services/emnist-dataset
+  G. Cohen, S. Afshar, J. Tapson, and A. van Schaik,
+  "EMNIST: an extension of MNIST to handwritten letters," 2017.
+  https://arxiv.org/abs/1702.05373
+
+Browser runtime
+---------------
+
+React 19.2.7, React DOM 19.2.7, and Scheduler 0.27.0
+  Source: https://github.com/facebook/react
+  License: MIT (MIT-REACT.txt)
+  Copyright (c) Meta Platforms, Inc. and affiliates.
+
+ONNX Runtime Web 1.27.0 and ONNX Runtime Common 1.27.0
+  Source: https://github.com/microsoft/onnxruntime/tree/v1.27.0
+  License: MIT (MIT-ONNX-RUNTIME.txt)
+  Copyright (c) Microsoft Corporation
+  The unmodified upstream third-party notice for the WebAssembly runtime is in
+  ONNXRUNTIME-THIRD-PARTY-NOTICES.txt.
+
+@noble/hashes 2.2.0
+  Source: https://github.com/paulmillr/noble-hashes/tree/2.2.0
+  License: MIT (MIT-NOBLE-HASHES.txt)
+  Copyright (c) 2022 Paul Miller (https://paulmillr.com)
+
+Dependency audit scope
+----------------------
+
+The production lock also installs flatbuffers, guid-typescript, long,
+platform, protobufjs, and protobufjs helper/type packages as transitive
+dependencies declared by onnxruntime-web. The selected onnxruntime-web/wasm
+prebundle's source map contains only ONNX Runtime Web and ONNX Runtime Common
+sources; those npm dependency modules are not emitted into this distribution.
+Third-party native code compiled into the ONNX Runtime WebAssembly asset is
+covered by the unmodified upstream ONNX Runtime third-party notice named above.

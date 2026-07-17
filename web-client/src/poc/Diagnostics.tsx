@@ -295,6 +295,13 @@ export function Diagnostics({
           )}
           {benchmark.error && <p>{benchmark.error}</p>}
         </div>
+
+        <a
+          className="diagnostics-legal"
+          href={`${import.meta.env.BASE_URL}legal/THIRD_PARTY_NOTICES.txt`}
+        >
+          Licenses and notices
+        </a>
       </div>
     </aside>
   );

@@ -125,7 +125,7 @@ describe("recognition raster pixels", () => {
     expect(first.shape).toEqual([1, 1, 32, 128]);
     expect(first.data).toHaveLength(128 * 32);
     expect(first.data).toEqual(second.data);
-    expect(first.preprocessingVersion).toBe("ppoker-ink-128x32-v1");
+    expect(first.preprocessingVersion).toBe("digits-model-input-v1");
     expect(Math.max(...first.data)).toBe(1);
     expect(first.data[0]).toBe(0);
     expect(first.data.every((value) => value >= 0 && value <= 1)).toBe(true);

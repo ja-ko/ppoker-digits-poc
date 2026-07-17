@@ -17,7 +17,7 @@ export interface PreprocessingConfig {
 
 export const PREPROCESSING_CONFIG: Readonly<PreprocessingConfig> =
   Object.freeze({
-    version: "ppoker-ink-128x32-v1",
+    version: "digits-model-input-v1",
     width: 128,
     height: 32,
     contentWidth: 120,

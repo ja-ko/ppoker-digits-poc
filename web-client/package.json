@@ -9,14 +9,23 @@
   },
   "packageManager": "npm@12.0.0",
   "scripts": {
+    "prepare": "npm run prepare:ort",
+    "prepare:ort": "node scripts/copy-ort-assets.mjs",
+    "predev": "npm run prepare:ort",
     "dev": "vite --host 0.0.0.0",
+    "prebuild": "npm run prepare:ort",
     "build": "tsc --noEmit && vite build",
+    "prepreview": "npm run prepare:ort",
+    "preview": "vite preview --host 0.0.0.0",
+    "pretest": "npm run prepare:ort",
     "test": "vitest run",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@noble/hashes": "2.2.0",
+    "onnxruntime-web": "1.27.0",
     "react": "19.2.7",
     "react-dom": "19.2.7"
   },

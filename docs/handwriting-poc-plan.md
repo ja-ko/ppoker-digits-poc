@@ -255,23 +255,25 @@ ink remains a separate Canvas 2D concern.
 
 ### Inference And Decoding
 
-- [ ] Load ONNX Runtime and the model once in a worker.
+- [x] Load ONNX Runtime and the model once in a worker.
 - [ ] Surface loading progress and initialization failures to the page.
-- [ ] Transfer tensors rather than copying large canvas state unnecessarily.
-- [ ] Run the batch-one ONNX session through the WASM execution provider.
-- [ ] Implement CTC greedy decoding as a correctness baseline.
-- [ ] Implement a small CTC prefix beam that combines paths with log-sum-exp.
-- [ ] Rank alternatives by CTC sequence log-score and compute the top-versus-
+- [x] Transfer tensors rather than copying large canvas state unnecessarily.
+- [x] Run the batch-one ONNX session through the WASM execution provider.
+- [x] Implement CTC greedy decoding as a correctness baseline.
+- [x] Implement a small CTC prefix beam that combines paths with log-sum-exp.
+- [x] Rank alternatives by CTC sequence log-score and compute the top-versus-
   second score margin.
-- [ ] Return text, confidence, alternatives, and inference duration.
-- [ ] Discard responses whose request ID is no longer current.
-- [ ] Measure `inferenceMs` around `session.run`; report worker round-trip and
+- [x] Return text, confidence, alternatives, and inference duration.
+- [x] Discard responses whose request ID is no longer current.
+- [x] Measure `inferenceMs` around `session.run`; report worker round-trip and
   rasterization time separately in diagnostics.
 
 Recognizer interface:
 
 ```ts
 type Recognition = {
+  requestId: number;
+  revision: number;
   text: string;
   // Provisional synthetic-data heuristic in the range 0..1, not a calibrated
   // probability of correctness on arbitrary user input.
@@ -307,10 +309,10 @@ type Recognition = {
 
 ### Recognizer Failure Handling
 
-- [ ] Track recognizer readiness separately as `loading`, `ready`, or `failed`.
+- [x] Track recognizer readiness separately as `loading`, `ready`, or `failed`.
 - [ ] Disable drawing until the recognizer is ready.
 - [ ] Surface initialization and worker failures with a retry control.
-- [ ] Time out hung inference without committing or rejecting the input.
+- [x] Time out hung inference without committing or rejecting the input.
 - [ ] Preserve ink after an inference failure so retry or additional input is
   possible.
 
@@ -459,10 +461,10 @@ ml/digits/
 
 - [x] Implement stroke capture and visible rendering.
 - [x] Implement deterministic software rasterization with invariant-based tests.
-- [ ] Add ONNX Runtime WASM assets and the inference worker.
-- [ ] Implement CTC decoding and confidence diagnostics.
+- [x] Add ONNX Runtime WASM assets and the inference worker.
+- [x] Implement CTC decoding and confidence diagnostics.
 - [ ] Implement finish detection and the interaction reducer.
-- [ ] Implement recognizer retry, crash, and timeout handling.
+- [x] Implement recognizer retry, crash, and timeout handling.
 - [ ] Implement commit, rejection, and clear animations.
 - [ ] Add the mock deck and diagnostic controls.
 
@@ -477,7 +479,7 @@ ml/digits/
 - [ ] Unit-test state transitions with fake timers and stale inference responses.
 - [ ] Unit-test pointer cancellation, recognizer failure, and delayed-prefix
   transitions.
-- [ ] Verify production Vite asset paths for model, worker, `.mjs`, and `.wasm`.
+- [x] Verify production Vite asset paths for model, worker, `.mjs`, and `.wasm`.
 - [ ] Test desktop mouse input.
 - [ ] Provide a production-build URL and qualitative physical-device smoke-test
   checklist to the product owner.

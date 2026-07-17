@@ -1,6 +1,6 @@
 import type { InkPadHandle } from "../InkPad";
 import type { RasterizedInk } from "../ink/rasterize";
-import { MODEL_INPUT_SHAPE } from "../recognition/types";
+import { canonicalValue, MODEL_INPUT_SHAPE } from "../recognition/types";
 import type {
   Recognition,
   RecognitionInput,
@@ -8,7 +8,6 @@ import type {
 } from "../recognition/types";
 import {
   classifyRecognition,
-  rejectionAnimation,
   type RejectionKind,
   type VoteInputEvent,
   type VoteInputState,
@@ -19,20 +18,17 @@ export const PREFIX_COMMIT_MS = 1_000;
 export const REJECTION_DEADLINE_MS = 1_100;
 export const COMMIT_EFFECT_MS = 460;
 export const REJECTION_EFFECT_MS = 420;
-export const DISSIPATION_EFFECT_MS = 310;
 export const CLEAR_EFFECT_MS = 220;
 
 export interface EffectDurations {
   commit: number;
-  invalid: number;
-  dissipate: number;
+  rejection: number;
   clear: number;
 }
 
 const REDUCED_EFFECT_DURATIONS: EffectDurations = {
   commit: 90,
-  invalid: 110,
-  dissipate: 90,
+  rejection: 110,
   clear: 90,
 };
 
@@ -41,20 +37,9 @@ export function effectDurations(reducedMotion: boolean): EffectDurations {
     ? REDUCED_EFFECT_DURATIONS
     : {
         commit: COMMIT_EFFECT_MS,
-        invalid: REJECTION_EFFECT_MS,
-        dissipate: DISSIPATION_EFFECT_MS,
+        rejection: REJECTION_EFFECT_MS,
         clear: CLEAR_EFFECT_MS,
       };
-}
-
-export function rejectionEffectDuration(
-  rejection: RejectionKind,
-  reducedMotion: boolean,
-): number {
-  const durations = effectDurations(reducedMotion);
-  return rejectionAnimation(rejection) === "invalid"
-    ? durations.invalid
-    : durations.dissipate;
 }
 
 export type TimerReason =
@@ -75,6 +60,15 @@ export interface FlowDiagnostics {
   recognition: Recognition | null;
   inferencePending: boolean;
   inferenceError: string | null;
+  decision: RecognitionDecisionDiagnostics | null;
+}
+
+export interface RecognitionDecisionDiagnostics {
+  outcome: "commit" | "reject";
+  candidate: string | null;
+  confidence: number | null;
+  deckValid: boolean | null;
+  rejection: RejectionKind | null;
 }
 
 export const initialFlowDiagnostics: FlowDiagnostics = {
@@ -85,7 +79,25 @@ export const initialFlowDiagnostics: FlowDiagnostics = {
   recognition: null,
   inferencePending: false,
   inferenceError: null,
+  decision: null,
 };
+
+function decisionDiagnostics(
+  outcome: RecognitionDecisionDiagnostics["outcome"],
+  recognition: Recognition | null,
+  numericDeck: readonly number[],
+  rejection: RejectionKind | null,
+): RecognitionDecisionDiagnostics {
+  const candidateValue = recognition ? canonicalValue(recognition.text) : null;
+  return {
+    outcome,
+    candidate: recognition?.text || null,
+    confidence: recognition?.confidence ?? null,
+    deckValid:
+      candidateValue === null ? null : numericDeck.includes(candidateValue),
+    rejection,
+  };
+}
 
 export interface RecognitionRuntime {
   readonly status: RecognizerStatus;
@@ -172,6 +184,7 @@ export class RecognitionFlow {
     this.options.onDiagnostics({
       recognition: null,
       inferenceError: null,
+      decision: null,
     });
     this.options.dispatch({ type: "POINTER_ACCEPTED", revision });
     return revision;
@@ -218,6 +231,7 @@ export class RecognitionFlow {
       rasterizationMs: null,
       recognition: null,
       inferenceError: null,
+      decision: null,
     });
     this.options.dispatch({
       type: "CLEAR",
@@ -424,9 +438,17 @@ export class RecognitionFlow {
       return;
     }
     if (disposition.type === "commit") {
-      this.beginCommit(pending.revision, disposition.value);
+      this.beginCommit(
+        pending.revision,
+        disposition.value,
+        pending.recognition,
+      );
     } else {
-      this.beginRejection(pending.revision, disposition.rejection);
+      this.beginRejection(
+        pending.revision,
+        disposition.rejection,
+        pending.recognition,
+      );
     }
   }
 
@@ -437,11 +459,15 @@ export class RecognitionFlow {
     reason: "incomplete" | "invalid" | "unclaimed",
   ): void {
     this.scheduleAt(reason, latestPointTime + REJECTION_DEADLINE_MS, () => {
-      this.beginRejection(revision, rejection);
+      this.beginRejection(revision, rejection, null);
     });
   }
 
-  private beginCommit(revision: number, value: number): void {
+  private beginCommit(
+    revision: number,
+    value: number,
+    recognition: Recognition,
+  ): void {
     const state = this.options.getState();
     const ink = this.options.getInk();
     if (
@@ -453,6 +479,14 @@ export class RecognitionFlow {
     }
     this.pendingRecognition = null;
     const reducedMotion = this.getReducedMotion();
+    this.options.onDiagnostics({
+      decision: decisionDiagnostics(
+        "commit",
+        recognition,
+        this.options.getNumericDeck(),
+        null,
+      ),
+    });
     this.options.dispatch({
       type: "BEGIN_COMMIT",
       revision,
@@ -471,7 +505,11 @@ export class RecognitionFlow {
     });
   }
 
-  private beginRejection(revision: number, rejection: RejectionKind): void {
+  private beginRejection(
+    revision: number,
+    rejection: RejectionKind,
+    recognition: Recognition | null,
+  ): void {
     const state = this.options.getState();
     const ink = this.options.getInk();
     if (
@@ -483,6 +521,14 @@ export class RecognitionFlow {
     }
     this.pendingRecognition = null;
     const reducedMotion = this.getReducedMotion();
+    this.options.onDiagnostics({
+      decision: decisionDiagnostics(
+        "reject",
+        recognition,
+        this.options.getNumericDeck(),
+        rejection,
+      ),
+    });
     this.options.dispatch({
       type: "BEGIN_REJECTION",
       revision,
@@ -490,8 +536,7 @@ export class RecognitionFlow {
       effectMotion: reducedMotion ? "reduced" : "full",
     });
     const duration =
-      this.rejectionEffectMs ??
-      rejectionEffectDuration(rejection, reducedMotion);
+      this.rejectionEffectMs ?? effectDurations(reducedMotion).rejection;
     this.scheduleAfter("reject-effect", duration, () => {
       const current = this.options.getState();
       if (current.revision !== revision || current.status !== "rejecting") {

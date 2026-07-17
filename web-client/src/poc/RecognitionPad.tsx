@@ -21,13 +21,16 @@ import {
   initialFlowDiagnostics,
   RecognitionFlow,
 } from "./recognition-flow";
-import type { FlowDiagnostics, RecognitionRuntime } from "./recognition-flow";
+import type {
+  FlowDiagnostics,
+  RecognitionDecisionDiagnostics,
+  RecognitionRuntime,
+} from "./recognition-flow";
 import {
   DEFAULT_NUMERIC_DECK,
   initialRecognizerStatus,
   initialVoteInputState,
   POC_BROWSER_DEFAULT_CONFIDENCE_THRESHOLD,
-  rejectionAnimation,
   recognizerReducer,
   voteInputReducer,
 } from "./recognition-state";
@@ -39,10 +42,6 @@ const BENCHMARK_WARMUPS = 10;
 const BENCHMARK_RUNS = 100;
 const BENCHMARK_TOTAL = BENCHMARK_WARMUPS + BENCHMARK_RUNS;
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
 function resultLocus(
   anchor: CanonicalInkLocus,
   currentSurface: InkSurfaceSize | null,
@@ -52,22 +51,11 @@ function resultLocus(
     anchor.center,
     fitCoordinateSpace(anchor.coordinateSpace, surface),
   );
-  const horizontalMargin = Math.min(72, surface.width * 0.2);
-  const topMargin = Math.min(210, surface.height * 0.34);
-  const bottomMargin = Math.min(150, surface.height * 0.25);
   return {
     inkX: mapped.x,
     inkY: mapped.y,
-    resultX: clamp(
-      mapped.x,
-      horizontalMargin,
-      surface.width - horizontalMargin,
-    ),
-    resultY: clamp(
-      mapped.y,
-      topMargin,
-      Math.max(topMargin, surface.height - bottomMargin),
-    ),
+    resultX: surface.width / 2,
+    resultY: surface.height / 2,
   };
 }
 
@@ -188,6 +176,21 @@ function interactionStatusText(
     return "Surface ready";
   }
   return `${inkStats.strokeCount} ${inkStats.strokeCount === 1 ? "stroke" : "strokes"}`;
+}
+
+function decisionStatusText(decision: RecognitionDecisionDiagnostics): string {
+  const candidate = decision.candidate ?? "n/a";
+  const confidence =
+    decision.confidence === null ? "n/a" : decision.confidence.toFixed(6);
+  const deckStatus =
+    decision.deckValid === null
+      ? "deck n/a"
+      : decision.deckValid
+        ? "in deck"
+        : "not in deck";
+  return decision.outcome === "commit"
+    ? `commit ${candidate} / confidence ${confidence} / ${deckStatus}`
+    : `reject ${decision.rejection ?? "unknown"} / likely ${candidate} / confidence ${confidence} / ${deckStatus}`;
 }
 
 export interface RecognitionPadProps {
@@ -425,14 +428,11 @@ export function RecognitionPad({
     ? input.effectMotion === "reduced"
     : reducedMotion;
   const durations = effectDurations(effectReducedMotion);
-  const rejectionEffect = input.rejection
-    ? rejectionAnimation(input.rejection)
-    : null;
   const inkEffect =
     input.status === "committing"
       ? "resolve"
       : input.status === "rejecting"
-        ? rejectionEffect
+        ? "reject"
         : input.status === "clearing"
           ? "clear"
           : "none";
@@ -441,8 +441,7 @@ export function RecognitionPad({
     : null;
   const shellStyle = {
     "--commit-effect-ms": `${durations.commit}ms`,
-    "--invalid-effect-ms": `${durations.invalid}ms`,
-    "--dissipate-effect-ms": `${durations.dissipate}ms`,
+    "--rejection-effect-ms": `${durations.rejection}ms`,
     "--clear-effect-ms": `${durations.clear}ms`,
     "--ink-center-x": locus ? `${locus.inkX}px` : "50%",
     "--ink-center-y": locus ? `${locus.inkY}px` : "56%",
@@ -450,8 +449,6 @@ export function RecognitionPad({
     "--result-center-y": locus ? `${locus.resultY}px` : "56%",
     "--ink-settle-x": locus ? `${locus.resultX - locus.inkX}px` : "0px",
     "--ink-settle-y": locus ? `${locus.resultY - locus.inkY}px` : "0px",
-    "--result-enter-x": locus ? `${locus.inkX - locus.resultX}px` : "0px",
-    "--result-enter-y": locus ? `${locus.inkY - locus.resultY}px` : "0px",
   } as CSSProperties;
 
   return (
@@ -465,36 +462,66 @@ export function RecognitionPad({
       style={shellStyle}
     >
       <div className="atmosphere" aria-hidden="true" />
-      <div className="writing-guide" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </div>
+      <div className="writing-zone">
+        <div className="writing-guide" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
 
-      <InkPad
-        ref={setInkHandle}
-        enabled={drawingEnabled}
-        className={`ink-canvas-${input.status}`}
-        onPointerAccepted={() => {
-          benchmarkAbortRef.current?.abort();
-          focusAfterClearRef.current = false;
-          flow.pointerAccepted();
-        }}
-        onActivePointerChange={setActivePointer}
-        onStrokeComplete={(stats) => {
-          setInkStats(stats);
-          flow.strokeCompleted();
-        }}
-        onStrokeCancel={(_reason, stats) => {
-          setInkStats(stats);
-          flow.strokeCancelled();
-        }}
-        onSurfaceChange={surfaceChanged}
-        onClear={() => {
-          setInkStats(EMPTY_INK_STATS);
-          setActivePointer(false);
-        }}
-      />
+        <InkPad
+          ref={setInkHandle}
+          enabled={drawingEnabled}
+          className={`ink-canvas-${input.status}`}
+          onPointerAccepted={() => {
+            benchmarkAbortRef.current?.abort();
+            focusAfterClearRef.current = false;
+            flow.pointerAccepted();
+          }}
+          onActivePointerChange={setActivePointer}
+          onStrokeComplete={(stats) => {
+            setInkStats(stats);
+            flow.strokeCompleted();
+          }}
+          onStrokeCancel={(_reason, stats) => {
+            setInkStats(stats);
+            flow.strokeCancelled();
+          }}
+          onSurfaceChange={surfaceChanged}
+          onClear={() => {
+            setInkStats(EMPTY_INK_STATS);
+            setActivePointer(false);
+          }}
+        />
+
+        {resultVisible && (
+          <section
+            className="committed-result"
+            data-result-phase={input.status}
+            aria-live="polite"
+          >
+            <output
+              aria-label={
+                input.status === "clearing"
+                  ? `Clearing vote ${input.value}`
+                  : `Committed vote ${input.value}`
+              }
+            >
+              {input.value}
+            </output>
+            {(input.status === "committed" || input.status === "clearing") && (
+              <button
+                className="result-clear"
+                type="button"
+                disabled={input.status === "clearing"}
+                onClick={(event) => clear(event.detail === 0)}
+              >
+                Clear and try again
+              </button>
+            )}
+          </section>
+        )}
+      </div>
 
       <header className="ink-header">
         <div className="identity">
@@ -539,41 +566,20 @@ export function RecognitionPad({
         </section>
       )}
 
-      {resultVisible && (
-        <section
-          className="committed-result"
-          data-result-phase={input.status}
-          aria-live="polite"
-        >
-          <output
-            aria-label={
-              input.status === "clearing"
-                ? `Clearing vote ${input.value}`
-                : `Committed vote ${input.value}`
-            }
-          >
-            {input.value}
-          </output>
-          {(input.status === "committed" || input.status === "clearing") && (
-            <button
-              className="result-clear"
-              type="button"
-              disabled={input.status === "clearing"}
-              onClick={(event) => clear(event.detail === 0)}
-            >
-              Clear and try again
-            </button>
-          )}
-        </section>
-      )}
-
-      <div className="mock-deck" aria-label="Current mock deck">
-        {parsedDeck.values.map((value) => (
-          <span key={value}>{value}</span>
-        ))}
-        <span title="Coffee is deck context, not handwriting input">
-          coffee
-        </span>
+      <div className="poc-context">
+        {flowDiagnostics.decision && (
+          <p className="decision-debug" aria-live="polite" aria-atomic="true">
+            {decisionStatusText(flowDiagnostics.decision)}
+          </p>
+        )}
+        <div className="mock-deck" aria-label="Current mock deck">
+          {parsedDeck.values.map((value) => (
+            <span key={value}>{value}</span>
+          ))}
+          <span title="Coffee is deck context, not handwriting input">
+            coffee
+          </span>
+        </div>
       </div>
 
       <footer className="ink-toolbar">

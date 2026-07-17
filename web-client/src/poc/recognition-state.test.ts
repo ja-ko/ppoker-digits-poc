@@ -6,7 +6,6 @@ import {
   initialRecognizerStatus,
   initialVoteInputState,
   POC_BROWSER_DEFAULT_CONFIDENCE_THRESHOLD,
-  rejectionAnimation,
   recognizerReducer,
   voteInputReducer,
 } from "./recognition-state";
@@ -207,12 +206,6 @@ describe("recognizer reducer", () => {
 });
 
 describe("recognition disposition", () => {
-  it("maps only deck-invalid input to the shake choreography", () => {
-    expect(rejectionAnimation("invalid")).toBe("invalid");
-    expect(rejectionAnimation("incomplete")).toBe("dissipate");
-    expect(rejectionAnimation("unclaimed")).toBe("dissipate");
-  });
-
   it.each([
     ["5", 0.95, [1, 5, 13], { type: "commit", value: 5, delay: "base" }],
     ["1", 0.95, [1, 13], { type: "commit", value: 1, delay: "prefix" }],

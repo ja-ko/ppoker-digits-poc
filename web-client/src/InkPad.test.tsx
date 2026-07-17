@@ -11,7 +11,7 @@ let surfaceBounds = { left: 0, top: 0, width: 320, height: 640 };
 let triggerResize: (() => void) | null = null;
 
 function pointerEvent(
-  type: "pointerdown" | "pointerup" | "pointercancel",
+  type: "pointerdown" | "pointermove" | "pointerup" | "pointercancel",
   x: number,
   y: number,
 ): Event {
@@ -280,6 +280,48 @@ describe("InkPad surface API", () => {
     expect(accepted).toHaveBeenCalledOnce();
     expect(canvas?.getAttribute("aria-disabled")).toBeNull();
     expect(surface?.getAttribute("aria-disabled")).toBe("true");
+    await act(async () => root.unmount());
+  });
+
+  it("ignores starts outside the surface and splits re-entering ink into bounded segments", async () => {
+    const accepted = vi.fn();
+    const completed = vi.fn();
+    const ref = createRef<InkPadHandle>();
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(
+        <InkPad
+          ref={ref}
+          onPointerAccepted={accepted}
+          onStrokeComplete={completed}
+        />,
+      );
+    });
+    const surface = container.querySelector<HTMLElement>(".ink-surface");
+
+    act(() => surface?.dispatchEvent(pointerEvent("pointerdown", -1, 30)));
+    expect(accepted).not.toHaveBeenCalled();
+    expect(ref.current?.isPointerActive()).toBe(false);
+
+    act(() => surface?.dispatchEvent(pointerEvent("pointerdown", 20, 30)));
+    act(() => surface?.dispatchEvent(pointerEvent("pointermove", 120, 230)));
+    act(() => surface?.dispatchEvent(pointerEvent("pointermove", 330, 250)));
+    act(() => surface?.dispatchEvent(pointerEvent("pointermove", 220, 330)));
+    act(() => surface?.dispatchEvent(pointerEvent("pointerup", 400, 400)));
+
+    expect(accepted).toHaveBeenCalledOnce();
+    expect(completed).toHaveBeenCalledWith({ strokeCount: 2, pointCount: 3 });
+    expect(ref.current?.getStrokes()).toHaveLength(2);
+    for (const stroke of ref.current?.getStrokes() ?? []) {
+      for (const point of stroke.points) {
+        expect(point.x).toBeGreaterThanOrEqual(0);
+        expect(point.x).toBeLessThanOrEqual(320);
+        expect(point.y).toBeGreaterThanOrEqual(0);
+        expect(point.y).toBeLessThanOrEqual(640);
+      }
+    }
     await act(async () => root.unmount());
   });
 

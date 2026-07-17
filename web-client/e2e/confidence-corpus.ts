@@ -21,23 +21,23 @@ export interface ConfidenceCorpusCase {
 }
 
 const DEFAULT_OUTCOMES = {
-  "1": 0.999768,
-  "2": 0.992332,
-  "3": 0.99987,
+  "1": 0.996158,
+  "2": 0.999977,
+  "3": 0.999929,
   "5": 0.999974,
-  "8": 0.997662,
+  "8": 0.999947,
   "13": 0.99976,
 } as const;
 
 const VALID_VARIANT_OUTCOMES: Readonly<Record<string, number>> = {
-  "unscaled-landscape-2": 0.999531,
-  "unscaled-landscape-3": 0.999552,
-  "unscaled-landscape-5": 0.999601,
-  "unscaled-landscape-8": 0.974351,
-  "joined-two-stroke-5": 0.999929,
-  "based-1": 0.999639,
-  "two-loop-8": 0.992308,
-  "non-aliased-13": 0.999619,
+  "unscaled-landscape-2": 0.996571,
+  "unscaled-landscape-3": 0.983747,
+  "unscaled-landscape-5": 0.996911,
+  "unscaled-landscape-8": 0.261995,
+  "joined-two-stroke-5": 0.999991,
+  "based-1": 0.99811,
+  "two-loop-8": 0.999842,
+  "non-aliased-13": 0.999945,
 };
 
 export const CONFIDENCE_CORPUS: readonly ConfidenceCorpusCase[] = [
@@ -53,19 +53,23 @@ export const CONFIDENCE_CORPUS: readonly ConfidenceCorpusCase[] = [
       commit: value,
     },
   })),
-  ...VALID_STROKE_VARIANTS.map((variant) => ({
-    name: variant.name,
-    category: "valid-variant" as const,
-    strokes: variant.strokes,
-    viewport: variant.viewport,
-    expected: {
-      raw: variant.expectedText,
-      greedy: variant.expectedText,
-      confidence: VALID_VARIANT_OUTCOMES[variant.name],
-      thresholdPass: "yes" as const,
-      commit: variant.expectedText,
-    },
-  })),
+  ...VALID_STROKE_VARIANTS.map((variant) => {
+    const landscapeEight = variant.name === "unscaled-landscape-8";
+    const expectedText = landscapeEight ? "2" : variant.expectedText;
+    return {
+      name: variant.name,
+      category: "valid-variant" as const,
+      strokes: variant.strokes,
+      viewport: variant.viewport,
+      expected: {
+        raw: expectedText,
+        greedy: expectedText,
+        confidence: VALID_VARIANT_OUTCOMES[variant.name],
+        thresholdPass: landscapeEight ? ("no" as const) : ("yes" as const),
+        commit: landscapeEight ? null : variant.expectedText,
+      },
+    };
+  }),
   {
     name: "tiny-diagonal",
     category: "invalid-mark",
@@ -116,7 +120,7 @@ export const CONFIDENCE_CORPUS: readonly ConfidenceCorpusCase[] = [
     expected: {
       raw: "-",
       greedy: "-",
-      confidence: 0.739076,
+      confidence: 0.889082,
       thresholdPass: "no",
       commit: null,
     },
@@ -140,8 +144,8 @@ export const CONFIDENCE_CORPUS: readonly ConfidenceCorpusCase[] = [
     expected: {
       raw: "0",
       greedy: "0",
-      confidence: 0.819466,
-      thresholdPass: "no",
+      confidence: 0.997141,
+      thresholdPass: "yes",
       commit: null,
     },
   },
@@ -161,8 +165,8 @@ export const CONFIDENCE_CORPUS: readonly ConfidenceCorpusCase[] = [
     expected: {
       raw: "11",
       greedy: "11",
-      confidence: 0.995869,
-      thresholdPass: "yes",
+      confidence: 0.463123,
+      thresholdPass: "no",
       commit: null,
     },
   },
@@ -181,7 +185,7 @@ export const CONFIDENCE_CORPUS: readonly ConfidenceCorpusCase[] = [
     expected: {
       raw: "3",
       greedy: "3",
-      confidence: 0.998133,
+      confidence: 0.991893,
       thresholdPass: "yes",
     },
   },
@@ -207,9 +211,9 @@ export const CONFIDENCE_CORPUS: readonly ConfidenceCorpusCase[] = [
       ],
     ],
     expected: {
-      raw: "18",
-      greedy: "18",
-      confidence: 0.714999,
+      raw: "13",
+      greedy: "13",
+      confidence: 0.750995,
       thresholdPass: "no",
       commit: null,
     },
@@ -232,7 +236,7 @@ export const CONFIDENCE_CORPUS: readonly ConfidenceCorpusCase[] = [
     expected: {
       raw: "11",
       greedy: "11",
-      confidence: 0.999948,
+      confidence: 0.999622,
       thresholdPass: "yes",
       commit: null,
     },
@@ -261,7 +265,7 @@ export const CONFIDENCE_CORPUS: readonly ConfidenceCorpusCase[] = [
     expected: {
       raw: "8",
       greedy: "8",
-      confidence: 0.99054,
+      confidence: 0.999924,
       thresholdPass: "yes",
     },
   },

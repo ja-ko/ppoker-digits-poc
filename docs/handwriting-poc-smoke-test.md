@@ -12,19 +12,22 @@ failures.
 
 ## Automated Desktop Coverage
 
-The committed Linux Chromium Playwright slice now provides repeatable desktop
-regression checks without changing the physical acceptance status:
+The committed Linux Chromium Playwright slice and focused WebKit regression
+slice now provide repeatable browser checks without changing the physical
+acceptance status:
 
 - [x] Production root, worker/model readiness, and real-model commits for every
-  numeric default-deck value through pointer input.
+      numeric default-deck value through pointer input.
 - [x] Prefix timing and cancellation, edge interruption, clear/reuse, keyboard
-  focus, reduced motion, resize/orientation/DPR, and narrow/landscape layout.
+      focus, reduced motion, resize/orientation/DPR, and narrow/landscape layout.
+- [x] Writing-zone hit testing, inert deck labels, persistent decision details,
+      universal rejection shake, centered results, and ink-to-center translation.
 - [x] Diagnostics disclosure and benchmark cancellation, threshold/deck guards,
-  recoverable model-load failure, and two focused visual baselines.
+      recoverable model-load failure, and two focused visual baselines.
 - [x] Deterministic confidence-policy corpus for default cards, invalid marks,
-  repeated/tight/overlapping evidence, and valid landscape/multi-stroke
-  variants. Known false accepts remain documented rather than hidden by a
-  fixture-specific guard.
+      repeated/tight/overlapping evidence, and landscape/multi-stroke variants.
+      Known false accepts and rejects remain documented rather than hidden by a
+      fixture-specific guard.
 
 These generated templates are not user handwriting and do not establish
 physical-device recognition quality. All owner checks below remain pending.
@@ -32,37 +35,41 @@ physical-device recognition quality. All owner checks below remain pending.
 Repeat the checklist once per device/browser:
 
 - [ ] Record device model, OS version, browser/version, and whether the URL is
-  plain LAN HTTP. Confirm the recognizer reaches `ready` and drawing is disabled
-  while it loads.
+      plain LAN HTTP. Confirm the recognizer reaches `ready` and drawing is disabled
+      while it loads.
 - [ ] With the default deck, enter `1`, `2`, `3`, `5`, `8`, and `13` repeatedly.
-  Note first-attempt recognition, visible stalls, wrong commits, and whether each
-  trace resolves cleanly into the typeset result. Confirm `coffee` is context,
-  not a handwriting target.
+      Note first-attempt recognition, visible stalls, wrong commits, and whether each
+      trace moves into and overlaps the centered typeset result. Confirm writing
+      outside the marked zone creates no ink, and tapping any displayed deck value
+      (including `coffee`) does nothing.
 - [ ] Open `?diagnostics=1`; set the numeric deck to include `0`, missing
-  single digits such as `4`, `7`, and `9`, representative two-digit values such
-  as `10`, `42`, and `99`, and three-digit values `100`, `128`, and `255`.
-  Exercise every listed value and note recognition quality without retaining ink.
+      single digits such as `4`, `7`, and `9`, representative two-digit values such
+      as `10`, `42`, and `99`, and three-digit values `100`, `128`, and `255`.
+      Exercise every listed value and note recognition quality without retaining
+      ink. Confirm the compact helper shows commit/reject, confidence, the rejected
+      candidate, and whether a canonical candidate was absent from the deck.
 - [ ] Write multi-stroke digits. During the inactivity/settling interval, begin
-  another stroke and confirm the earlier partial value never commits. Interrupt
-  an active stroke by rotating or otherwise causing cancellation; confirm the
-  partial stroke is discarded, completed strokes remain, and later input works.
+      another stroke and confirm the earlier partial value never commits. Interrupt
+      an active stroke by rotating or otherwise causing cancellation; confirm the
+      partial stroke is discarded, completed strokes remain, and later input works.
 - [ ] Write a confident value absent from the current deck; confirm it waits,
-  shakes, clears, and never claims a card. Temporarily raise the diagnostics
-  confidence threshold so an otherwise readable sample falls below it; confirm
-  it waits and fades without shaking or showing a correction choice.
+      shakes, clears, and never claims a card. Temporarily raise the diagnostics
+      confidence threshold so an otherwise readable sample falls below it; confirm
+      it also waits, shakes, and fades without showing a correction choice.
 - [ ] After several successful and rejected attempts, use both **Clear surface**
-  and **Clear and try again**. Confirm each returns a fully reusable empty pad.
+      and **Clear and try again**. Confirm each returns a fully reusable empty pad.
 - [ ] Rotate portrait to landscape and back before, during, and after input.
-  Background and resume the browser. Confirm geometry remains usable, stale work
-  does not commit, and recognition still works or presents a recoverable error.
+      Background and resume the browser. Confirm geometry remains usable, stale work
+      does not commit, and recognition still works or presents a recoverable error.
 - [ ] Enable the OS/browser reduced-motion preference before loading. Confirm
-  commit, rejection, and clear remain understandable without full motion.
+      commit, rejection, and clear remain understandable without translation or
+      shake motion.
 - [ ] Exercise a loading failure, for example by making the test server
-  temporarily unreachable during a fresh uncached load. Confirm an explicit
-  error and retry control appear, then restore the server and recover.
+      temporarily unreachable during a fresh uncached load. Confirm an explicit
+      error and retry control appear, then restore the server and recover.
 - [ ] Record qualitative animation and recognition notes, concrete failing
-  numeric examples, and whether the interaction feels responsive. Record no ink,
-  raster, image, video, or user handwriting data.
+      numeric examples, and whether the interaction feels responsive. Record no ink,
+      raster, image, video, or user handwriting data.
 
 ## Pending Owner Result
 
@@ -74,10 +81,10 @@ rasters, screenshots, recordings, or other handwriting data.
 - [ ] iPhone Safari checklist completed without retained ink.
 - [ ] Android Chrome checklist completed without retained ink.
 - [ ] Product owner records the qualitative gate result and concrete failure
-  categories.
+      categories.
 - [ ] Product owner accepts or rejects continued use of this recognizer. This
-  decision does not approve the provisional confidence rule for production or
-  establish out-of-distribution safety.
+      decision does not approve the provisional confidence rule for production or
+      establish out-of-distribution safety.
 
 Owner result: **Pending**
 

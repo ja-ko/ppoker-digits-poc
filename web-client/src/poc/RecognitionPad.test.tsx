@@ -10,6 +10,7 @@ import {
   BASE_QUIET_MS,
   CLEAR_EFFECT_MS,
   COMMIT_EFFECT_MS,
+  REJECTION_EFFECT_MS,
 } from "./recognition-flow";
 
 let motionPreference = false;
@@ -253,6 +254,15 @@ describe("RecognitionPad integration", () => {
     );
     expect(container.querySelector(".diagnostics")).toBeNull();
     expect(draw?.disabled).toBe(false);
+    const deckFive = Array.from(
+      container.querySelectorAll<HTMLElement>(".mock-deck span"),
+    ).find((value) => value.textContent === "5");
+    act(() => {
+      deckFive?.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+      deckFive?.click();
+    });
+    expect(invalidations).toEqual([]);
+    expect(container.querySelector("main")?.dataset.inputState).toBe("empty");
     act(() => draw?.click());
     expect(invalidations).toEqual([1]);
     expect(container.querySelector("main")?.dataset.inputState).toBe(
@@ -277,8 +287,26 @@ describe("RecognitionPad integration", () => {
       container
         .querySelector<HTMLElement>("main")
         ?.style.getPropertyValue("--result-center-y"),
-    ).toBe("220px");
+    ).toBe("320px");
+    expect(
+      container
+        .querySelector<HTMLElement>("main")
+        ?.style.getPropertyValue("--result-center-x"),
+    ).toBe("160px");
+    expect(
+      container
+        .querySelector<HTMLElement>("main")
+        ?.style.getPropertyValue("--ink-settle-x"),
+    ).toBe("80px");
+    expect(
+      container
+        .querySelector<HTMLElement>("main")
+        ?.style.getPropertyValue("--ink-settle-y"),
+    ).toBe("100px");
     expect(container.querySelector("output")?.textContent).toBe("5");
+    expect(container.querySelector(".decision-debug")?.textContent).toBe(
+      "commit 5 / confidence 1.000000 / in deck",
+    );
     expect(
       Array.from(container.querySelectorAll("button")).some(
         (button) => button.textContent === "Clear surface",
@@ -305,6 +333,7 @@ describe("RecognitionPad integration", () => {
     clear?.focus();
     act(() => clear?.click());
     expect(invalidations).toEqual([1, 2]);
+    expect(container.querySelector(".decision-debug")).toBeNull();
     expect(container.querySelector("main")?.dataset.inputState).toBe(
       "clearing",
     );
@@ -328,12 +357,12 @@ describe("RecognitionPad integration", () => {
   });
 
   it.each([
-    ["invalid", "4", 1, "invalid"],
-    ["low confidence", "5", 0.1, "dissipate"],
-    ["noncanonical", "01", 1, "dissipate"],
+    ["invalid", "4", 1, "not in deck"],
+    ["low confidence", "5", 0.1, "in deck"],
+    ["noncanonical", "01", 1, "deck n/a"],
   ])(
-    "exposes the semantic %s rejection hook without a candidate",
-    async (_name, text, confidence, effect) => {
+    "exposes the semantic %s rejection hook and decision helper",
+    async (_name, text, confidence, deckStatus) => {
       const { runtime } = mockRuntime(text as string, confidence as number);
       const container = document.createElement("div");
       document.body.append(container);
@@ -356,8 +385,22 @@ describe("RecognitionPad integration", () => {
       });
       const main = container.querySelector("main");
       expect(main?.dataset.inputState).toBe("rejecting");
-      expect(main?.dataset.inkEffect).toBe(effect);
+      expect(main?.dataset.inkEffect).toBe("reject");
       expect(container.querySelector("output")).toBeNull();
+      expect(container.querySelector(".decision-debug")?.textContent).toContain(
+        `likely ${text}`,
+      );
+      expect(container.querySelector(".decision-debug")?.textContent).toContain(
+        `confidence ${Number(confidence).toFixed(6)}`,
+      );
+      expect(container.querySelector(".decision-debug")?.textContent).toContain(
+        deckStatus,
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(REJECTION_EFFECT_MS);
+      });
+      expect(main?.dataset.inputState).toBe("empty");
+      expect(container.querySelector(".decision-debug")).not.toBeNull();
       await act(async () => root.unmount());
     },
   );

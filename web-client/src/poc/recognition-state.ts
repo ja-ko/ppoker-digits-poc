@@ -15,14 +15,7 @@ export type VoteInputStatus =
   | "clearing";
 
 export type RejectionKind = "incomplete" | "invalid" | "unclaimed";
-export type RejectionAnimation = "dissipate" | "invalid";
 export type EffectMotion = "full" | "reduced";
-
-export function rejectionAnimation(
-  rejection: RejectionKind,
-): RejectionAnimation {
-  return rejection === "invalid" ? "invalid" : "dissipate";
-}
 
 export interface VoteInputState {
   status: VoteInputStatus;

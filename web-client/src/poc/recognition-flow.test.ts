@@ -12,7 +12,6 @@ import {
   BASE_QUIET_MS,
   CLEAR_EFFECT_MS,
   COMMIT_EFFECT_MS,
-  DISSIPATION_EFFECT_MS,
   effectDurations,
   initialFlowDiagnostics,
   PREFIX_COMMIT_MS,
@@ -287,6 +286,13 @@ describe("recognition timing", () => {
     expect(harness.recognizeCalls).toHaveLength(1);
     expect(harness.state).toMatchObject({ status: "committing", value: 5 });
     expect(harness.diagnostics.recognition?.text).toBe("5");
+    expect(harness.diagnostics.decision).toEqual({
+      outcome: "commit",
+      candidate: "5",
+      confidence: 0.99,
+      deckValid: true,
+      rejection: null,
+    });
 
     await vi.advanceTimersByTimeAsync(COMMIT_EFFECT_MS);
     expect(harness.state).toMatchObject({ status: "committed", value: 5 });
@@ -379,14 +385,14 @@ describe("recognition timing", () => {
   });
 
   it.each([
-    ["proper prefix", [13], "1", 0.99, "incomplete"],
-    ["invalid deck value", [1, 5], "4", 0.99, "invalid"],
-    ["low confidence", [5], "5", 0.5, "unclaimed"],
-    ["noncanonical", [1], "01", 0.99, "unclaimed"],
-    ["empty text", [1], "", 0.99, "unclaimed"],
+    ["proper prefix", [13], "1", 0.99, "incomplete", false],
+    ["invalid deck value", [1, 5], "4", 0.99, "invalid", false],
+    ["low confidence", [5], "5", 0.5, "unclaimed", true],
+    ["noncanonical", [1], "01", 0.99, "unclaimed", null],
+    ["empty text", [1], "", 0.99, "unclaimed", null],
   ])(
     "waits until 1100 ms for %s",
-    async (_name, deck, text, confidence, rejection) => {
+    async (_name, deck, text, confidence, rejection, deckValid) => {
       const harness = createHarness(deck as number[]);
       harness.setRecognition(async (_input, revision) =>
         recognition(text as string, confidence as number, revision),
@@ -400,39 +406,38 @@ describe("recognition timing", () => {
         status: "rejecting",
         rejection,
       });
+      expect(harness.diagnostics.decision).toEqual({
+        outcome: "reject",
+        candidate: text || null,
+        confidence,
+        deckValid,
+        rejection,
+      });
       expect(harness.ink.clears).toBe(0);
     },
   );
 
-  it("uses a shorter soft dissipation than the invalid shake", async () => {
-    const invalid = createHarness([5]);
-    invalid.setRecognition(async (_input, revision) =>
-      recognition("4", 0.99, revision),
-    );
-    invalid.draw();
-    await vi.advanceTimersByTimeAsync(REJECTION_DEADLINE_MS);
-    expect(invalid.state).toMatchObject({
-      status: "rejecting",
-      rejection: "invalid",
-    });
-    await vi.advanceTimersByTimeAsync(DISSIPATION_EFFECT_MS);
-    expect(invalid.state.status).toBe("rejecting");
-    await vi.advanceTimersByTimeAsync(
-      REJECTION_EFFECT_MS - DISSIPATION_EFFECT_MS,
-    );
-    expect(invalid.state.status).toBe("empty");
-
-    vi.setSystemTime(0);
-    const unclaimed = createHarness([5]);
-    unclaimed.setRecognition(async (_input, revision) =>
-      recognition("5", 0.5, revision),
-    );
-    unclaimed.draw();
-    await vi.advanceTimersByTimeAsync(
-      REJECTION_DEADLINE_MS + DISSIPATION_EFFECT_MS,
-    );
-    expect(unclaimed.state.status).toBe("empty");
-  });
+  it.each([
+    ["invalid", "4", 0.99],
+    ["incomplete", "1", 0.99],
+    ["unclaimed", "5", 0.5],
+  ])(
+    "uses the full shake duration for %s rejection",
+    async (_name, text, confidence) => {
+      const deck = _name === "incomplete" ? [13] : [5];
+      const harness = createHarness(deck);
+      harness.setRecognition(async (_input, revision) =>
+        recognition(text as string, confidence as number, revision),
+      );
+      harness.draw();
+      await vi.advanceTimersByTimeAsync(REJECTION_DEADLINE_MS);
+      expect(harness.state.status).toBe("rejecting");
+      await vi.advanceTimersByTimeAsync(REJECTION_EFFECT_MS - 1);
+      expect(harness.state.status).toBe("rejecting");
+      await vi.advanceTimersByTimeAsync(1);
+      expect(harness.state.status).toBe("empty");
+    },
+  );
 
   it("uses deterministic opacity-only timing for reduced motion", async () => {
     const harness = createHarness([5], true);
@@ -507,6 +512,13 @@ describe("recognition timing", () => {
     await vi.advanceTimersByTimeAsync(REJECTION_DEADLINE_MS - BASE_QUIET_MS);
     expect(harness.state).toMatchObject({
       status: "rejecting",
+      rejection: "unclaimed",
+    });
+    expect(harness.diagnostics.decision).toEqual({
+      outcome: "reject",
+      candidate: null,
+      confidence: null,
+      deckValid: null,
       rejection: "unclaimed",
     });
   });

@@ -33,9 +33,10 @@ import {
 import type { CanvasMetrics, InkBounds, VisibleInkStyle } from "./ink/render";
 import type { ImmutableInkStroke, InkStroke } from "./ink/types";
 
-interface ActiveStroke {
+interface ActivePointer {
   pointerId: number;
-  stroke: InkStroke;
+  strokes: InkStroke[];
+  currentStroke: InkStroke | null;
 }
 
 export interface InkStats {
@@ -137,7 +138,7 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
   const surfaceRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const completedStrokesRef = useRef<InkStroke[]>([]);
-  const activeStrokeRef = useRef<ActiveStroke | null>(null);
+  const activeStrokeRef = useRef<ActivePointer | null>(null);
   const latestPointTimeRef = useRef<number | null>(null);
   const visualBoundsRef = useRef<InkVisualBounds | null>(null);
   const canonicalInkLocusRef = useRef<CanonicalInkLocus | null>(null);
@@ -290,13 +291,13 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
       updateVisualBounds();
     };
 
-    const appendCompletedInk = (stroke: InkStroke) => {
+    const appendCompletedInk = (strokes: readonly InkStroke[]) => {
       updateCanonicalInkLocus();
       const context = completedInkCanvas.getContext("2d");
       if (!context) {
         return;
       }
-      drawInk(context, [viewportStroke(stroke)], visibleStyle());
+      drawInk(context, strokes.map(viewportStroke), visibleStyle());
       updateVisualBounds();
     };
 
@@ -314,7 +315,7 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
 
       const active = activeStrokeRef.current;
       if (active) {
-        drawInk(context, [viewportStroke(active.stroke)], visibleStyle());
+        drawInk(context, active.strokes.map(viewportStroke), visibleStyle());
       }
     };
 
@@ -413,20 +414,38 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
       requestPaint();
     };
 
-    const capturedPoints = (event: PointerEvent) => {
-      const points = pointsFromPointerEvent(event, pointerOrigin);
-      const transform = viewportTransform;
-      return transform
-        ? points.map((point) => viewportPointToCanonical(point, transform))
-        : points;
+    const isWithinSurface = (x: number, y: number): boolean => {
+      return Boolean(
+        metrics &&
+        x >= 0 &&
+        y >= 0 &&
+        x <= metrics.logicalWidth &&
+        y <= metrics.logicalHeight,
+      );
     };
 
-    const appendCapturedPoints = (stroke: InkStroke, event: PointerEvent) => {
-      const points = capturedPoints(event);
-      appendOrderedPoints(stroke.points, points);
-      const latest = stroke.points.at(-1)?.time;
-      if (latest !== undefined) {
-        latestPointTimeRef.current = latest;
+    const appendCapturedPoints = (
+      active: ActivePointer,
+      event: PointerEvent,
+    ) => {
+      const transform = viewportTransform;
+      for (const point of pointsFromPointerEvent(event, pointerOrigin)) {
+        if (!isWithinSurface(point.x, point.y)) {
+          active.currentStroke = null;
+          continue;
+        }
+        if (!active.currentStroke) {
+          active.currentStroke = { points: [] };
+          active.strokes.push(active.currentStroke);
+        }
+        const capturedPoint = transform
+          ? viewportPointToCanonical(point, transform)
+          : point;
+        appendOrderedPoints(active.currentStroke.points, [capturedPoint]);
+        const latest = active.currentStroke.points.at(-1)?.time;
+        if (latest !== undefined) {
+          latestPointTimeRef.current = latest;
+        }
       }
     };
 
@@ -446,11 +465,23 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
       ) {
         resizeSurface();
       }
+      if (
+        !isWithinSurface(
+          event.clientX - pointerOrigin.left,
+          event.clientY - pointerOrigin.top,
+        )
+      ) {
+        return;
+      }
       event.preventDefault();
       propsRef.current.onPointerAccepted?.();
-      const stroke: InkStroke = { points: [] };
-      appendCapturedPoints(stroke, event);
-      activeStrokeRef.current = { pointerId: event.pointerId, stroke };
+      const active: ActivePointer = {
+        pointerId: event.pointerId,
+        strokes: [],
+        currentStroke: null,
+      };
+      appendCapturedPoints(active, event);
+      activeStrokeRef.current = active;
       propsRef.current.onActivePointerChange?.(true);
       surface.setPointerCapture(event.pointerId);
       requestPaint();
@@ -463,7 +494,7 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
       }
 
       event.preventDefault();
-      appendCapturedPoints(active.stroke, event);
+      appendCapturedPoints(active, event);
       requestPaint();
     };
 
@@ -474,11 +505,14 @@ export const InkPad = forwardRef<InkPadHandle, InkPadProps>(function InkPad(
       }
 
       event.preventDefault();
-      appendCapturedPoints(active.stroke, event);
+      appendCapturedPoints(active, event);
       activeStrokeRef.current = null;
-      completedStrokesRef.current.push(active.stroke);
+      const strokes = active.strokes.filter(
+        (stroke) => stroke.points.length > 0,
+      );
+      completedStrokesRef.current.push(...strokes);
       releaseCapture(event.pointerId);
-      appendCompletedInk(active.stroke);
+      appendCompletedInk(strokes);
       propsRef.current.onActivePointerChange?.(false);
       propsRef.current.onStrokeComplete?.(
         inkStats(completedStrokesRef.current),

@@ -41,11 +41,11 @@ jobs:
         run: npm install --global npm@12.0.0
       - name: Install dependencies
         run: npm ci
-      - name: Install pinned Playwright Chromium headless shell and dependencies
-        run: npx playwright install --with-deps --only-shell chromium
+      - name: Install pinned Playwright browser engines and dependencies
+        run: npx playwright install --with-deps --only-shell chromium webkit
       - name: Check POC launcher syntax
         run: bash -n ../scripts/serve-handwriting-poc.sh
-      - name: Run full web verification including Chromium E2E
+      - name: Run full web verification including Chromium and WebKit E2E
         run: npm run verify:full
         env:
           CHROME_BIN: google-chrome

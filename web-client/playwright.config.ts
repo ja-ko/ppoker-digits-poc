@@ -36,6 +36,11 @@ export default defineConfig({
   projects: [
     { name: "chromium-behavior", testIgnore: /visual\.spec\.ts/ },
     {
+      name: "webkit-ios-regression",
+      testMatch: /ios-regression\.spec\.ts/,
+      use: { browserName: "webkit" },
+    },
+    {
       name: "chromium",
       testMatch: /visual\.spec\.ts/,
       use: {

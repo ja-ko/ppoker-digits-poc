@@ -126,6 +126,45 @@ async function capturedEffect(page: Page): Promise<EffectCapture> {
   );
 }
 
+test("the guide bounds input and deck labels do not start ink", async ({
+  readyPage,
+}) => {
+  const surface = readyPage.getByRole("region", {
+    name: /Handwriting surface/,
+  });
+  const [surfaceBox, guideBox] = await Promise.all([
+    surface.boundingBox(),
+    readyPage.locator(".writing-guide").boundingBox(),
+  ]);
+  expect(surfaceBox).not.toBeNull();
+  expect(guideBox).not.toBeNull();
+  expect(surfaceBox).toEqual(guideBox);
+
+  await readyPage.locator(".mock-deck span").filter({ hasText: /^5$/ }).click();
+  await expect(shell(readyPage)).toHaveAttribute("data-input-state", "empty");
+  await expect(diagnosticValue(readyPage, "strokes / points")).toHaveText(
+    "0 / 0",
+  );
+
+  await readyPage.mouse.move(
+    surfaceBox!.x + surfaceBox!.width / 2,
+    surfaceBox!.y - 8,
+  );
+  await readyPage.mouse.down();
+  await readyPage.mouse.up();
+  await expect(shell(readyPage)).toHaveAttribute("data-input-state", "empty");
+
+  await readyPage.mouse.move(surfaceBox!.x + 30, surfaceBox!.y + 30);
+  await readyPage.mouse.down();
+  await readyPage.mouse.move(surfaceBox!.x + 90, surfaceBox!.y + 90);
+  await readyPage.mouse.move(surfaceBox!.x - 15, surfaceBox!.y + 100);
+  await readyPage.mouse.move(surfaceBox!.x + 140, surfaceBox!.y + 140);
+  await readyPage.mouse.up();
+  await expect(diagnosticValue(readyPage, "strokes / points")).toHaveText(
+    /^2 \/ /,
+  );
+});
+
 test("pointerdown at an edge cancels commit and restores ink", async ({
   readyPage,
 }) => {
@@ -216,6 +255,8 @@ test("default threshold commits 13 while threshold and deck guards remain active
   await drawCard(readyPage, "13");
   await readyPage.waitForTimeout(100);
   await expect(diagnosticValue(readyPage, "threshold pass")).toHaveText("yes");
+  await expect(readyPage.locator(".decision-debug")).toContainText("commit 13");
+  await expect(readyPage.locator(".decision-debug")).toContainText("in deck");
   await expect(shell(readyPage)).toHaveAttribute(
     "data-input-state",
     "committing",
@@ -238,6 +279,11 @@ test("default threshold commits 13 while threshold and deck guards remain active
     "data-input-state",
     "rejecting",
   );
+  await expect(readyPage.locator(".decision-debug")).toContainText(
+    "reject unclaimed",
+  );
+  await expect(readyPage.locator(".decision-debug")).toContainText("likely 5");
+  await expect(readyPage.locator(".decision-debug")).toContainText("in deck");
   await expect(readyPage.locator("output")).toHaveCount(0);
   await expect(shell(readyPage)).toHaveAttribute("data-input-state", "empty");
 
@@ -259,7 +305,62 @@ test("default threshold commits 13 while threshold and deck guards remain active
     "data-input-state",
     "rejecting",
   );
+  await expect(readyPage.locator(".decision-debug")).toContainText(
+    "not in deck",
+  );
   await expect(readyPage.locator("output")).toHaveCount(0);
+});
+
+test("full-motion low-confidence rejection uses the shake choreography", async ({
+  readyPage,
+}) => {
+  await openDiagnostics(readyPage);
+  await readyPage
+    .getByRole("spinbutton", { name: "POC browser confidence threshold" })
+    .fill("1");
+  await readyPage.getByRole("button", { name: "Close" }).click();
+  await armEffectCapture(readyPage, "rejecting");
+  await drawCard(readyPage, "5");
+  await readyPage.waitForTimeout(300);
+  const capture = await capturedEffect(readyPage);
+  expect(capture.inkEffect).toBe("reject");
+  expect(capture.canvas.animationName).toBe("ink-reject");
+  expect(
+    new Set(capture.canvas.keyframes.map((frame) => frame.transform)).size,
+  ).toBeGreaterThan(2);
+});
+
+test("full-motion commit translates off-center ink to the result center", async ({
+  readyPage,
+}) => {
+  const offCenterFive = CARD_STROKES["5"].map((stroke) =>
+    stroke.map((point) => ({
+      x: 0.3 + (point.x - 0.5) * 0.45,
+      y: point.y,
+    })),
+  );
+  await armEffectCapture(readyPage, "committing");
+  await drawTemplate(readyPage, offCenterFive);
+  const capture = await capturedEffect(readyPage);
+  expect(capture.inkEffect).toBe("resolve");
+  expect(capture.canvas.animationName).toBe("ink-resolve");
+
+  const settleOffset = await shell(readyPage).evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      x: Number.parseFloat(style.getPropertyValue("--ink-settle-x")),
+      y: Number.parseFloat(style.getPropertyValue("--ink-settle-y")),
+    };
+  });
+  expect(Math.hypot(settleOffset.x, settleOffset.y)).toBeGreaterThan(20);
+  const finalTransform = capture.canvas.keyframes.at(-1)?.transform;
+  expect(finalTransform).not.toBeNull();
+  const endpoint = await readyPage.evaluate((transform) => {
+    const matrix = new DOMMatrix(transform ?? "none");
+    return { x: matrix.e, y: matrix.f };
+  }, finalTransform);
+  expect(endpoint.x).toBeCloseTo(settleOffset.x, 1);
+  expect(endpoint.y).toBeCloseTo(settleOffset.y, 1);
 });
 
 test("diagnostics collapse, expand, avoid clear, and cancel benchmark", async ({
@@ -416,7 +517,7 @@ test("reduced motion invalid input suppresses transform and shake keyframes", as
   await readyPage.waitForTimeout(300);
 
   const capture = await capturedEffect(readyPage);
-  expect(capture.inkEffect).toBe("invalid");
+  expect(capture.inkEffect).toBe("reject");
   expect(capture.canvas.animationName).toBe("ink-opacity-only");
   expect(capture.canvas.filter).toBe("none");
   expect(capture.canvas.transform).toBe("none");
@@ -466,6 +567,14 @@ test("resize, orientation, and DPR preserve ink and the committed locus", async 
       "data-input-state",
       "committing",
     );
+    const settleOffset = await shell(readyPage).evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        x: Number.parseFloat(style.getPropertyValue("--ink-settle-x")),
+        y: Number.parseFloat(style.getPropertyValue("--ink-settle-y")),
+      };
+    });
+    expect(Math.hypot(settleOffset.x, settleOffset.y)).toBeGreaterThan(20);
     await session.send("Emulation.setDeviceMetricsOverride", {
       width: 391,
       height: 844,
@@ -474,42 +583,57 @@ test("resize, orientation, and DPR preserve ink and the committed locus", async 
       screenOrientation: { type: "portraitPrimary", angle: 0 },
     });
     await expect
-      .poll(() =>
-        readyPage
+      .poll(async () => {
+        const metrics = await readyPage
           .locator("canvas.ink-canvas")
-          .evaluate((canvas: HTMLCanvasElement) => canvas.width),
-      )
-      .toBe(782);
-    const duringCommit = await canvasInkSnapshot(readyPage);
-    expect(duringCommit.alphaPixels).toBeGreaterThan(0);
-    expect(
-      await readyPage
-        .locator("canvas.ink-canvas")
-        .evaluate((canvas: HTMLCanvasElement) => ({
-          backingWidth: canvas.width,
-          cssWidth: canvas.clientWidth,
-          dpr: window.devicePixelRatio,
-        })),
-    ).toEqual({ backingWidth: 782, cssWidth: 391, dpr: 2 });
+          .evaluate((canvas: HTMLCanvasElement) => ({
+            backingWidth: canvas.width,
+            cssWidth: canvas.getBoundingClientRect().width,
+            dpr: window.devicePixelRatio,
+          }));
+        return (
+          metrics.dpr === 2 &&
+          metrics.backingWidth === Math.round(metrics.cssWidth * metrics.dpr)
+        );
+      })
+      .toBe(true);
+    const canvasMetrics = await readyPage
+      .locator("canvas.ink-canvas")
+      .evaluate((canvas: HTMLCanvasElement) => ({
+        backingWidth: canvas.width,
+        cssWidth: canvas.getBoundingClientRect().width,
+        dpr: window.devicePixelRatio,
+      }));
+    expect(canvasMetrics.dpr).toBe(2);
+    expect(canvasMetrics.backingWidth).toBe(
+      Math.round(canvasMetrics.cssWidth * canvasMetrics.dpr),
+    );
+    expect(canvasMetrics.cssWidth).toBeLessThan(391);
 
     await expect(shell(readyPage)).toHaveAttribute(
       "data-input-state",
       "committed",
     );
-    const portraitResult = await readyPage.locator("output").boundingBox();
+    const [portraitResult, portraitSurface] = await Promise.all([
+      readyPage.locator("output").boundingBox(),
+      readyPage
+        .getByRole("region", { name: /Handwriting surface/ })
+        .boundingBox(),
+    ]);
     expect(portraitResult).not.toBeNull();
+    expect(portraitSurface).not.toBeNull();
     expect(
       Math.abs(
         portraitResult!.x +
           portraitResult!.width / 2 -
-          rotatedInk.logicalCenter!.x,
+          (portraitSurface!.x + portraitSurface!.width / 2),
       ),
     ).toBeLessThan(3);
     expect(
       Math.abs(
         portraitResult!.y +
           portraitResult!.height / 2 -
-          rotatedInk.logicalCenter!.y,
+          (portraitSurface!.y + portraitSurface!.height / 2),
       ),
     ).toBeLessThan(3);
 
@@ -521,8 +645,28 @@ test("resize, orientation, and DPR preserve ink and the committed locus", async 
       screenOrientation: { type: "landscapePrimary", angle: 90 },
     });
     await settlePaint(readyPage);
-    const result = await readyPage.locator("output").boundingBox();
+    const [result, landscapeSurface] = await Promise.all([
+      readyPage.locator("output").boundingBox(),
+      readyPage
+        .getByRole("region", { name: /Handwriting surface/ })
+        .boundingBox(),
+    ]);
     expect(result).not.toBeNull();
+    expect(landscapeSurface).not.toBeNull();
+    expect(
+      Math.abs(
+        result!.x +
+          result!.width / 2 -
+          (landscapeSurface!.x + landscapeSurface!.width / 2),
+      ),
+    ).toBeLessThan(3);
+    expect(
+      Math.abs(
+        result!.y +
+          result!.height / 2 -
+          (landscapeSurface!.y + landscapeSurface!.height / 2),
+      ),
+    ).toBeLessThan(3);
     expect(result!.x).toBeGreaterThanOrEqual(0);
     expect(result!.y).toBeGreaterThanOrEqual(0);
     expect(result!.x + result!.width).toBeLessThanOrEqual(844);

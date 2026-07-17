@@ -5,7 +5,8 @@
     "path": "digits-crnn.onnx",
     "sha256": "bea69199be71c01a35f4485ad853ef6fd11608c616c452598cb3f330922db9af",
     "bytes": 1714986,
-    "onnxOpset": 17
+    "onnxOpset": 17,
+    "modificationNotice": "Modified 2026-07-16 from the Apache-2.0 CRNN Tiny architecture: input width changed from 160 to 128, labels changed to canonical one-to-three-digit sequences, the model was fine-tuned on EMNIST compositions, and it was exported as static batch-one ONNX; see upstreamReference for initialization-audit scope."
   },
   "upstreamReference": {
     "repository": "https://github.com/zjykzj/crnn-ctc",
@@ -15,6 +16,7 @@
     "checkpointUrl": "https://github.com/zjykzj/crnn-ctc/releases/download/v1.3.0/crnn_tiny-emnist.pth",
     "checkpointSha256": "6d2a653513fd71f9d5de1fc238311dc017d285f0bbc55e09da7ed9eea80479c9",
     "license": "Apache-2.0",
+    "copyright": "Copyright 2023 zjykzj",
     "role": "Architecture and reported initialization reference; see initializationAudit for verification scope.",
     "initializationAudit": {
       "reportedPath": "artifacts/upstream/crnn_tiny-emnist.pth",

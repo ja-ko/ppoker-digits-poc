@@ -1,6 +1,6 @@
 import { defineConfig } from "@playwright/test";
 
-const port = 4173;
+const port = Number(process.env.PLAYWRIGHT_PORT ?? "4173");
 const baseURL = `http://127.0.0.1:${port}`;
 
 export default defineConfig({
@@ -49,7 +49,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run preview -- --host 127.0.0.1 --port 4173 --strictPort",
+    command: `npm run preview -- --host 127.0.0.1 --port ${port} --strictPort`,
     url: baseURL,
     timeout: 15_000,
     reuseExistingServer: false,

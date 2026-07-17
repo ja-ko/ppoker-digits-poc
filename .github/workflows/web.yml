@@ -10,7 +10,6 @@ on:
       - "third_party/licenses/Apache-2.0.txt"
       - "README.md"
       - "docs/handwriting-poc*.md"
-      - "docs/mobile-client-product-plan.md"
       - ".github/workflows/web.yml"
   pull_request:
     paths:
@@ -21,8 +20,10 @@ on:
       - "third_party/licenses/Apache-2.0.txt"
       - "README.md"
       - "docs/handwriting-poc*.md"
-      - "docs/mobile-client-product-plan.md"
       - ".github/workflows/web.yml"
+
+permissions:
+  contents: read
 
 jobs:
   verify:

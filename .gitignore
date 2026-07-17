@@ -1,0 +1,28 @@
+# Web client
+/web-client/node_modules/
+/web-client/dist/
+/web-client/coverage/
+/web-client/.vite/
+/web-client/playwright-report/
+/web-client/test-results/
+/web-client/*.tsbuildinfo
+/web-client/public/legal/
+/web-client/public/ort/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# ML downloads, caches, and training outputs. Exported ONNX models stay tracked.
+/ml/**/.venv/
+/ml/**/__pycache__/
+/ml/**/.pytest_cache/
+/ml/**/.mypy_cache/
+/ml/**/data/
+/ml/**/checkpoints/
+/ml/**/artifacts/
+*.pyc
+*.ckpt
+*.pth
+*.pt

@@ -1,16 +1,28 @@
-ppoker handwriting POC - third-party notices
-================================================
+ppoker-digits-poc - third-party notices
+========================================
 
 This file describes code and model material included in the built web
 distribution. The complete license texts named below are distributed beside
-this file under legal/. Source for ppoker is available at
-https://github.com/ja-ko/ppoker.
+this file under legal/. The corresponding source is maintained in the
+ppoker-digits-poc repository.
 
 Project
 -------
 
-ppoker is licensed under the European Union Public Licence 1.2. See
-EUPL-1.2.txt.
+Copyright 2026 Jannik Kolodziej. Except for third-party material identified
+below, ppoker-digits-poc is licensed under the European Union Public Licence
+1.2. See EUPL-1.2.txt.
+
+Modification notice: on 17 July 2026, the handwriting POC was extracted from an
+unpublished branch of https://github.com/ja-ko/ppoker into this standalone
+repository. Unrelated application code and history were removed; repository
+documentation, ignore rules, package/distribution identifiers, and workflow
+scope were changed.
+
+This local POC build is intended to be served from its complete source checkout
+and not redistributed independently. Any distributor must accompany it with the
+corresponding source or replace this paragraph with the location of an easily
+and freely accessible source repository.
 
 Derived CRNN model and source
 -----------------------------
@@ -32,7 +44,8 @@ retained checkpoint matched the upstream checksum after the run, but no
 checksum was captured at training start, so pre-training binary checkpoint
 lineage is not independently established.
 
-The recorded derivative changes the input width from 160 to 128, composes
+Modification notice for model.py and models/digits-crnn.onnx (16 July 2026):
+the recorded derivative changes the input width from 160 to 128, composes
 canonical one-to-three-digit labels, reports fine-tuning from that intended
 initialization reference, and exports a static batch-one ONNX graph. See
 APACHE-2.0.txt and MODEL_NOTICE.txt.

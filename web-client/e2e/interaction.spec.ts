@@ -426,7 +426,7 @@ test("normal notices link stays accessible at 280px with diagnostics and clear",
   const href = await notices.getAttribute("href");
   const response = await readyPage.request.get(href!);
   expect(response.ok()).toBe(true);
-  expect(await response.text()).toContain("ppoker handwriting POC");
+  expect(await response.text()).toContain("ppoker-digits-poc");
 
   await drawCard(readyPage, "5");
   await expect(shell(readyPage)).toHaveAttribute(

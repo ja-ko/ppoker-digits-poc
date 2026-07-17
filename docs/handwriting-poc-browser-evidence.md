@@ -83,11 +83,12 @@ engineered templates rather than sampled handwriting.
 
 Visual tests use a dedicated Chromium project/worker, wait for fonts and finite
 animations, disable transitions and font hinting, and capture only stable empty
-and committed states. A full update, visual-only update, then full update kept
-these Linux baseline SHA-256 values unchanged:
+and committed states. The committed-result baseline was intentionally regenerated
+after the standalone footer branding changed. Current Linux baseline SHA-256
+values are:
 
 - Empty portrait: `a05a45e11749124a785ae18ac470e92b41dcd369a35a50b5df458e9abaf4481d`
-- Committed five: `c311fea434c610b2a99f103683e7ae790f537ad9c9ffe4c13f3fa0f54f8c5c65`
+- Committed five: `35f9a679aabb5ac40e49cc7a802bb7e941491a15454210c66b27b0e372ea26f0`
 
 ## Limitation
 

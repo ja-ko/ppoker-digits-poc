@@ -78,7 +78,7 @@
   },
   "final_evaluation_used_for_tuning": false,
   "post_final_model_or_data_tuning": false,
-  "post_export_review_updates": "Pipeline provenance enforcement, tests, and JSON wording were updated after export without retraining or modifying the ONNX artifact.",
-  "post_export_review_updated_at_utc": "2026-07-16T13:08:45+00:00",
+  "post_export_review_updates": "Pipeline provenance enforcement, tests, JSON wording, and the adjacent Apache-2.0 model modification notice were updated after export without retraining or modifying the ONNX artifact.",
+  "post_export_review_updated_at_utc": "2026-07-17T20:53:53+00:00",
   "final_pool_provenance": "The untouched v1 reserve glyph pool became the v2 final pool; the previously evaluated v1 final pool was retired."
 }

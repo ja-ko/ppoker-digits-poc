@@ -526,7 +526,7 @@ export function RecognitionPad({
       <header className="ink-header">
         <div className="identity">
           <span className="identity-mark" aria-hidden="true" />
-          <span>ppoker / ink study</span>
+          <span>digits / ink study</span>
         </div>
         <div className="range-label">canonical 0-255</div>
         <h1>Write a number.</h1>

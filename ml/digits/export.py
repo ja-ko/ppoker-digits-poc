@@ -290,6 +290,7 @@ def metadata(
             "sha256": sha256_file(model_path),
             "bytes": model_path.stat().st_size,
             "onnxOpset": OPSET,
+            "modificationNotice": "Modified 2026-07-16 from the Apache-2.0 CRNN Tiny architecture: input width changed from 160 to 128, labels changed to canonical one-to-three-digit sequences, the model was fine-tuned on EMNIST compositions, and it was exported as static batch-one ONNX; see upstreamReference for initialization-audit scope.",
         },
         "upstreamReference": {
             "repository": "https://github.com/zjykzj/crnn-ctc",
@@ -299,6 +300,7 @@ def metadata(
             "checkpointUrl": "https://github.com/zjykzj/crnn-ctc/releases/download/v1.3.0/crnn_tiny-emnist.pth",
             "checkpointSha256": "6d2a653513fd71f9d5de1fc238311dc017d285f0bbc55e09da7ed9eea80479c9",
             "license": "Apache-2.0",
+            "copyright": "Copyright 2023 zjykzj",
             "role": "Architecture and reported initialization reference; see initializationAudit for verification scope.",
             "initializationAudit": initialization_metadata(training),
         },

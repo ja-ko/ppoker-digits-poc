@@ -8,7 +8,7 @@ fi
 repo_root=$(cd -- "$script_dir/.." && pwd -P)
 web_dir="$repo_root/web-client"
 lock_file="$web_dir/package-lock.json"
-lock_stamp="$web_dir/node_modules/.ppoker-package-lock.sha256"
+lock_stamp="$web_dir/node_modules/.ppoker-digits-poc-package-lock.sha256"
 
 for command_name in node npm; do
   if ! command -v "$command_name" >/dev/null 2>&1; then

@@ -2,13 +2,10 @@
 
 ## Status
 
-This proof of concept evaluates the riskiest mobile-client requirement: whether
-finger-written one-to-three-digit numbers can be recognized and committed in a
-fast, satisfying browser interaction. It deliberately excludes room networking
-and does not establish that automatic confidence decisions are production-safe.
-
-The final product plan is maintained in
-[mobile-client-product-plan.md](mobile-client-product-plan.md).
+This standalone proof of concept evaluates whether finger-written one-to-three-
+digit numbers can be recognized and committed in a fast, satisfying browser
+interaction. It deliberately excludes networking and does not establish that
+automatic confidence decisions are production-safe.
 
 **Implementation status: the POC implementation and local automated verification
 are complete, and it is ready for owner device test.** CI configuration is
@@ -132,7 +129,7 @@ These values are tuning defaults, not protocol guarantees.
       interaction and visual checks.
 - [x] Use `uv` for reproducible Python model tooling.
 - [x] Record supported Node and Python versions alongside their lockfiles.
-- [x] Do not add Rust/WASM or restructure the existing Rust package in this proof.
+- [x] Do not add a Rust/WASM application component to this proof.
 
 ## Model Decision
 
@@ -456,9 +453,8 @@ ml/digits/
 - [x] Add formatting, linting, Vitest, and production build scripts.
 - [x] Pin the supported Node version and package-manager behavior.
 - [x] Add web artifacts to `.gitignore`.
-- [x] Add a dedicated web CI job without changing native release behavior.
-- [ ] Do not change native release-versioning policy while the proof remains
-      unmerged; revisit release isolation before product integration.
+- [x] Add a dedicated web CI job scoped to the standalone proof.
+- [x] Keep this repository isolated from native application release versioning.
 
 ### Model Tooling
 
@@ -577,14 +573,14 @@ recognizer-accuracy gate. All physical browser gates below remain owner work.
       replacement.
 - [ ] Record explicitly that POC acceptance does not approve the confidence rule
       for production automatic commits or establish out-of-distribution safety.
-- [ ] Do not begin Rust/WASM room integration until the recognizer exit decision
-      is recorded.
+- [ ] Record the recognizer exit decision before integrating it into another
+      application.
 
 ## Non-Goals
 
 - [x] No WebSocket or server connection.
 - [x] No QR code generation or room URL routing.
-- [x] No Rust crate restructuring or browser WASM poker client.
+- [x] No Rust/WASM application integration.
 - [x] No name generation, persistence, or session resumption.
 - [x] No reveal, reset, average, distribution, or exact-vote views.
 - [x] No deck picker implementation.

@@ -1,0 +1,61 @@
+{
+  "version": "digits-manifests-v2",
+  "source": {
+    "dataset": "EMNIST Digits",
+    "official_train_glyphs": 240000,
+    "official_test_glyphs": 40000,
+    "url": "https://biometrics.nist.gov/cs_links/EMNIST/gzip.zip",
+    "archive_sha256": "fb9bb67e33772a9cc0b895e4ecf36d2cf35be8b709693c3564cea2a019fcda8e",
+    "raw_sha256": {
+      "train_images": "0fd17ca7bc21f8a10f68356f3c60e9c36ef287895394791ecd051c7a15ea4acd",
+      "train_labels": "86013a4b932e35477a90ecff239cf492643795cf3c68dd6b7fae3264fb24316b",
+      "test_images": "3075fed46264a655192bd2ac1dafba8ce0c5184802d74acd0a123e25daa15c50",
+      "test_labels": "a456cc5cfc928851403b513f94937b9d7570f424ea6d56dce3b28f6c0723608a"
+    }
+  },
+  "glyph_split": {
+    "algorithm": "For each class d, numpy Generator(PCG64(seed+d)) permutes official test indices; contiguous 1000-glyph slices are assigned in listed pool order.",
+    "seed": 20260716,
+    "pool_size_per_digit": 1000,
+    "pool_order": ["model_selection", "calibration", "final_test", "reserve"],
+    "pool_sha256": {
+      "model_selection": "6795dc521edb42ad14a7a37b6ace09e8969867a8ba610e459ead3069b17089cf",
+      "calibration": "2211213c57176f757bd8da048adecf66a4d018693c02b5ae54b6b6b950e29723",
+      "final_test": "1b8b0074bdc42af5a4e9ed177e3329bb05caa92b9ce965ec2f3ec87eed4b9e34",
+      "reserve": "0b0b738275b5eb4b5ef78e209e59eb8b572d72601faafe4579087ab92d30af23"
+    }
+  },
+  "compositions": {
+    "model_selection": {
+      "glyph_pool": "model_selection",
+      "seed": 31001,
+      "count": 6000,
+      "spec_sha256": "ee4fcb48c55e8fab9b2af1b8b5eadda1cc13daaac2341966eb4d82c5196fcdae"
+    },
+    "calibration": {
+      "glyph_pool": "calibration",
+      "seed": 41001,
+      "count": 9000,
+      "spec_sha256": "3965cf4c1b5a5d554e53e9363f773ffc719885832f376a2508da3d53461b261a"
+    },
+    "final_test": {
+      "glyph_pool": "reserve",
+      "seed": 61001,
+      "count": 15000,
+      "spec_sha256": "66df56ebef93f502b9e0a599df38f2486163dff93d97364be37bd281ae06794e"
+    }
+  },
+  "reserve": {
+    "status": "consumed as the untouched final_test pool for remediation model iteration v2",
+    "remaining_untouched_glyphs": 0,
+    "previous_final_test_pool_status": "retired after informing the v1 report; never reused for v2 final evaluation"
+  },
+  "v2_pool_roles": {
+    "model_selection": "model_selection",
+    "calibration": "calibration",
+    "final_test": "reserve (previously untouched)",
+    "retired": "final_test (observed during v1)"
+  },
+  "composition_algorithm": "digits-compose-v2",
+  "balance": "index modulo 3 selects lengths 1, 2, and 3; labels are uniform within 0-9, 10-99, and 100-255 respectively"
+}

@@ -1,0 +1,495 @@
+{
+  "started_at_utc": "2026-07-16T12:28:21.580002+00:00",
+  "completed_at_utc": "2026-07-16T12:49:19.003047+00:00",
+  "pipeline_source_sha256_at_training_completion": {
+    "dataset.py": "bc77841fd5d760c523093e8611f6aecbee07a42332125e7cf70a721ca2f3ad35",
+    "decode.py": "48b2094e79baa0401580fa3b57f78f1939b5f35a8e30a21c4d4ebd1080d2295a",
+    "download.py": "1287c3a6e35820c436494a5fdfe2d29d92e4fe00fbe33a2bfa59fa6a44473bc2",
+    "evaluate.py": "3c7aed88f4e998c77cffc68925ad70e15fea5d6661bf22caa3bd974c90b510ca",
+    "export.py": "4a11ad5e5d6103604a78fcc1ce2c2a1c3a78da5307ff51c6489faaf58c928994",
+    "freeze.py": "6887d1b8ea209362397f6793cf0415b6b1b6537d154e39b88a47b50ae3607dcb",
+    "model.py": "5ad35a7745b367b9945da393bd68eec8b52bee29895d5f188b8e018a63d30926",
+    "provenance.py": "57ab53807fd15add2e6810eb12cb8e47b4a0e0fc7a0c9c63fdd5fa62ad219a88",
+    "train.py": "64f00acbaa97f772a2b821dbdb0895a7133493ded5093394324f90d169f4e196",
+    "manifests/v2.json": "2c1fa7b09f7a547a7eeb2ae1d0f3f99a29b66fd39e0643a7ec024262becfcc64",
+    "pyproject.toml": "e9854a4c57bd827ae7cf8eaf512ac27799611de5f5976138ade7e6ed5f0679c9",
+    "uv.lock": "62a40d5b058aeaae3b6d9c7bab2ae56df331f0d40b9b38c9f67a0239c7f323fc"
+  },
+  "pipeline_source_audit": {
+    "capture_timing": "after training and model selection completed",
+    "unchanged_during_training": null,
+    "scope": "These hashes audit the source at training completion and do not prove files were unchanged after training began."
+  },
+  "device": "cpu",
+  "initial_checkpoint": "artifacts/upstream/crnn_tiny-emnist.pth",
+  "initial_checkpoint_verification": {
+    "expected_sha256": "6d2a653513fd71f9d5de1fc238311dc017d285f0bbc55e09da7ed9eea80479c9",
+    "actual_sha256": "6d2a653513fd71f9d5de1fc238311dc017d285f0bbc55e09da7ed9eea80479c9",
+    "verified_before_training": false,
+    "verified_post_run_at_utc": "2026-07-16T13:08:45+00:00",
+    "scope": "The retained file at the reported path matches the upstream checksum post-run; no training-start checksum was captured, so stronger binary initialization lineage is not claimed."
+  },
+  "seed": 72016,
+  "epochs_requested": 10,
+  "epochs_completed": 10,
+  "samples_per_epoch": 100000,
+  "total_training_compositions": 1000000,
+  "batch_size": 256,
+  "workers": 8,
+  "torch_threads": 16,
+  "optimizer": "AdamW",
+  "learning_rate": 0.0001,
+  "weight_decay": 1e-05,
+  "scheduler": "CosineAnnealingLR eta_min=learning_rate/10",
+  "gradient_clip_norm": 5.0,
+  "baseline_model_selection": {
+    "decoder": "greedy CTC",
+    "raw_prediction_contract": "Unconstrained CTC text; may be empty, noncanonical, or outside 0..255.",
+    "greedy_noncanonical_predictions": 114,
+    "overall": {
+      "correct": 4275,
+      "total": 6000,
+      "accuracy": 0.7125
+    },
+    "by_length": {
+      "1": {
+        "correct": 1893,
+        "total": 2000,
+        "accuracy": 0.9465
+      },
+      "2": {
+        "correct": 1509,
+        "total": 2000,
+        "accuracy": 0.7545
+      },
+      "3": {
+        "correct": 873,
+        "total": 2000,
+        "accuracy": 0.4365
+      }
+    },
+    "repeated_digits": {
+      "correct": 405,
+      "total": 832,
+      "accuracy": 0.48677884615384615
+    }
+  },
+  "best_model_selection_accuracy": 0.9848333333333333,
+  "best_epoch": 8,
+  "model_selection_evaluation": {
+    "evaluation_role": "model_selection",
+    "manifest": "model_selection",
+    "composition_count": 6000,
+    "selected_epoch": 8,
+    "selection_rule": "maximum overall exact-match accuracy; earliest epoch wins ties",
+    "history_flag_semantics": "Historical selected_as_best flags mean the epoch became best so far; export validation recomputes the final selected epoch from all epoch accuracies."
+  },
+  "wall_seconds": 1255.003981383983,
+  "selected_checkpoint_sha256": "07b5cad2087000d381c99944889593fffba033c4363a7a6ef7be2d47557a26bb",
+  "augmentation_tuning": {
+    "performed": false,
+    "reason": "No model-selection-driven augmentation tuning was needed; review remediation made configured translation effective before this full rerun."
+  },
+  "epochs": [
+    {
+      "epoch": 1,
+      "learning_rate": 0.0001,
+      "mean_ctc_loss": 0.20071965258836746,
+      "seconds": 118.46871797903441,
+      "samples_per_second": 844.10468608006,
+      "model_selection": {
+        "decoder": "greedy CTC",
+        "raw_prediction_contract": "Unconstrained CTC text; may be empty, noncanonical, or outside 0..255.",
+        "greedy_noncanonical_predictions": 27,
+        "overall": {
+          "correct": 5813,
+          "total": 6000,
+          "accuracy": 0.9688333333333333
+        },
+        "by_length": {
+          "1": {
+            "correct": 1982,
+            "total": 2000,
+            "accuracy": 0.991
+          },
+          "2": {
+            "correct": 1950,
+            "total": 2000,
+            "accuracy": 0.975
+          },
+          "3": {
+            "correct": 1881,
+            "total": 2000,
+            "accuracy": 0.9405
+          }
+        },
+        "repeated_digits": {
+          "correct": 775,
+          "total": 832,
+          "accuracy": 0.9314903846153846
+        }
+      },
+      "selected_as_best": true
+    },
+    {
+      "epoch": 2,
+      "learning_rate": 9.779754323328192e-05,
+      "mean_ctc_loss": 0.03997874214053154,
+      "seconds": 122.34924454503926,
+      "samples_per_second": 817.3323862509667,
+      "model_selection": {
+        "decoder": "greedy CTC",
+        "raw_prediction_contract": "Unconstrained CTC text; may be empty, noncanonical, or outside 0..255.",
+        "greedy_noncanonical_predictions": 20,
+        "overall": {
+          "correct": 5870,
+          "total": 6000,
+          "accuracy": 0.9783333333333334
+        },
+        "by_length": {
+          "1": {
+            "correct": 1986,
+            "total": 2000,
+            "accuracy": 0.993
+          },
+          "2": {
+            "correct": 1967,
+            "total": 2000,
+            "accuracy": 0.9835
+          },
+          "3": {
+            "correct": 1917,
+            "total": 2000,
+            "accuracy": 0.9585
+          }
+        },
+        "repeated_digits": {
+          "correct": 795,
+          "total": 832,
+          "accuracy": 0.9555288461538461
+        }
+      },
+      "selected_as_best": true
+    },
+    {
+      "epoch": 3,
+      "learning_rate": 9.140576474687264e-05,
+      "mean_ctc_loss": 0.03070940163731575,
+      "seconds": 124.71843440504745,
+      "samples_per_second": 801.8060880657825,
+      "model_selection": {
+        "decoder": "greedy CTC",
+        "raw_prediction_contract": "Unconstrained CTC text; may be empty, noncanonical, or outside 0..255.",
+        "greedy_noncanonical_predictions": 18,
+        "overall": {
+          "correct": 5893,
+          "total": 6000,
+          "accuracy": 0.9821666666666666
+        },
+        "by_length": {
+          "1": {
+            "correct": 1989,
+            "total": 2000,
+            "accuracy": 0.9945
+          },
+          "2": {
+            "correct": 1972,
+            "total": 2000,
+            "accuracy": 0.986
+          },
+          "3": {
+            "correct": 1932,
+            "total": 2000,
+            "accuracy": 0.966
+          }
+        },
+        "repeated_digits": {
+          "correct": 803,
+          "total": 832,
+          "accuracy": 0.9651442307692307
+        }
+      },
+      "selected_as_best": true
+    },
+    {
+      "epoch": 4,
+      "learning_rate": 8.14503363531613e-05,
+      "mean_ctc_loss": 0.0279996331346035,
+      "seconds": 123.96274374000495,
+      "samples_per_second": 806.6939871041935,
+      "model_selection": {
+        "decoder": "greedy CTC",
+        "raw_prediction_contract": "Unconstrained CTC text; may be empty, noncanonical, or outside 0..255.",
+        "greedy_noncanonical_predictions": 19,
+        "overall": {
+          "correct": 5883,
+          "total": 6000,
+          "accuracy": 0.9805
+        },
+        "by_length": {
+          "1": {
+            "correct": 1989,
+            "total": 2000,
+            "accuracy": 0.9945
+          },
+          "2": {
+            "correct": 1965,
+            "total": 2000,
+            "accuracy": 0.9825
+          },
+          "3": {
+            "correct": 1929,
+            "total": 2000,
+            "accuracy": 0.9645
+          }
+        },
+        "repeated_digits": {
+          "correct": 798,
+          "total": 832,
+          "accuracy": 0.9591346153846154
+        }
+      },
+      "selected_as_best": false
+    },
+    {
+      "epoch": 5,
+      "learning_rate": 6.890576474687264e-05,
+      "mean_ctc_loss": 0.025216491740942003,
+      "seconds": 123.03437169903191,
+      "samples_per_second": 812.7810027316688,
+      "model_selection": {
+        "decoder": "greedy CTC",
+        "raw_prediction_contract": "Unconstrained CTC text; may be empty, noncanonical, or outside 0..255.",
+        "greedy_noncanonical_predictions": 21,
+        "overall": {
+          "correct": 5893,
+          "total": 6000,
+          "accuracy": 0.9821666666666666
+        },
+        "by_length": {
+          "1": {
+            "correct": 1993,
+            "total": 2000,
+            "accuracy": 0.9965
+          },
+          "2": {
+            "correct": 1966,
+            "total": 2000,
+            "accuracy": 0.983
+          },
+          "3": {
+            "correct": 1934,
+            "total": 2000,
+            "accuracy": 0.967
+          }
+        },
+        "repeated_digits": {
+          "correct": 799,
+          "total": 832,
+          "accuracy": 0.9603365384615384
+        }
+      },
+      "selected_as_best": false
+    },
+    {
+      "epoch": 6,
+      "learning_rate": 5.500000000000001e-05,
+      "mean_ctc_loss": 0.02381949394464493,
+      "seconds": 124.85243054898456,
+      "samples_per_second": 800.9455607735729,
+      "model_selection": {
+        "decoder": "greedy CTC",
+        "raw_prediction_contract": "Unconstrained CTC text; may be empty, noncanonical, or outside 0..255.",
+        "greedy_noncanonical_predictions": 19,
+        "overall": {
+          "correct": 5899,
+          "total": 6000,
+          "accuracy": 0.9831666666666666
+        },
+        "by_length": {
+          "1": {
+            "correct": 1992,
+            "total": 2000,
+            "accuracy": 0.996
+          },
+          "2": {
+            "correct": 1970,
+            "total": 2000,
+            "accuracy": 0.985
+          },
+          "3": {
+            "correct": 1937,
+            "total": 2000,
+            "accuracy": 0.9685
+          }
+        },
+        "repeated_digits": {
+          "correct": 798,
+          "total": 832,
+          "accuracy": 0.9591346153846154
+        }
+      },
+      "selected_as_best": true
+    },
+    {
+      "epoch": 7,
+      "learning_rate": 4.109423525312737e-05,
+      "mean_ctc_loss": 0.021766594000458717,
+      "seconds": 123.81530006200774,
+      "samples_per_second": 807.6546270930908,
+      "model_selection": {
+        "decoder": "greedy CTC",
+        "raw_prediction_contract": "Unconstrained CTC text; may be empty, noncanonical, or outside 0..255.",
+        "greedy_noncanonical_predictions": 18,
+        "overall": {
+          "correct": 5907,
+          "total": 6000,
+          "accuracy": 0.9845
+        },
+        "by_length": {
+          "1": {
+            "correct": 1990,
+            "total": 2000,
+            "accuracy": 0.995
+          },
+          "2": {
+            "correct": 1973,
+            "total": 2000,
+            "accuracy": 0.9865
+          },
+          "3": {
+            "correct": 1944,
+            "total": 2000,
+            "accuracy": 0.972
+          }
+        },
+        "repeated_digits": {
+          "correct": 800,
+          "total": 832,
+          "accuracy": 0.9615384615384616
+        }
+      },
+      "selected_as_best": true
+    },
+    {
+      "epoch": 8,
+      "learning_rate": 2.8549663646838717e-05,
+      "mean_ctc_loss": 0.021526375700831414,
+      "seconds": 124.99886645103106,
+      "samples_per_second": 800.0072547791904,
+      "model_selection": {
+        "decoder": "greedy CTC",
+        "raw_prediction_contract": "Unconstrained CTC text; may be empty, noncanonical, or outside 0..255.",
+        "greedy_noncanonical_predictions": 16,
+        "overall": {
+          "correct": 5909,
+          "total": 6000,
+          "accuracy": 0.9848333333333333
+        },
+        "by_length": {
+          "1": {
+            "correct": 1992,
+            "total": 2000,
+            "accuracy": 0.996
+          },
+          "2": {
+            "correct": 1969,
+            "total": 2000,
+            "accuracy": 0.9845
+          },
+          "3": {
+            "correct": 1948,
+            "total": 2000,
+            "accuracy": 0.974
+          }
+        },
+        "repeated_digits": {
+          "correct": 804,
+          "total": 832,
+          "accuracy": 0.9663461538461539
+        }
+      },
+      "selected_as_best": true
+    },
+    {
+      "epoch": 9,
+      "learning_rate": 1.8594235253127375e-05,
+      "mean_ctc_loss": 0.0200931446403265,
+      "seconds": 123.63270576100331,
+      "samples_per_second": 808.8474597758288,
+      "model_selection": {
+        "decoder": "greedy CTC",
+        "raw_prediction_contract": "Unconstrained CTC text; may be empty, noncanonical, or outside 0..255.",
+        "greedy_noncanonical_predictions": 18,
+        "overall": {
+          "correct": 5909,
+          "total": 6000,
+          "accuracy": 0.9848333333333333
+        },
+        "by_length": {
+          "1": {
+            "correct": 1992,
+            "total": 2000,
+            "accuracy": 0.996
+          },
+          "2": {
+            "correct": 1967,
+            "total": 2000,
+            "accuracy": 0.9835
+          },
+          "3": {
+            "correct": 1950,
+            "total": 2000,
+            "accuracy": 0.975
+          }
+        },
+        "repeated_digits": {
+          "correct": 806,
+          "total": 832,
+          "accuracy": 0.96875
+        }
+      },
+      "selected_as_best": false
+    },
+    {
+      "epoch": 10,
+      "learning_rate": 1.2202456766718093e-05,
+      "mean_ctc_loss": 0.019592352781295775,
+      "seconds": 124.38668924995,
+      "samples_per_second": 803.9445426435788,
+      "model_selection": {
+        "decoder": "greedy CTC",
+        "raw_prediction_contract": "Unconstrained CTC text; may be empty, noncanonical, or outside 0..255.",
+        "greedy_noncanonical_predictions": 15,
+        "overall": {
+          "correct": 5909,
+          "total": 6000,
+          "accuracy": 0.9848333333333333
+        },
+        "by_length": {
+          "1": {
+            "correct": 1993,
+            "total": 2000,
+            "accuracy": 0.9965
+          },
+          "2": {
+            "correct": 1968,
+            "total": 2000,
+            "accuracy": 0.984
+          },
+          "3": {
+            "correct": 1948,
+            "total": 2000,
+            "accuracy": 0.974
+          }
+        },
+        "repeated_digits": {
+          "correct": 803,
+          "total": 832,
+          "accuracy": 0.9651442307692307
+        }
+      },
+      "selected_as_best": false
+    }
+  ]
+}

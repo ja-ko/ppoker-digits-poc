@@ -1,0 +1,94 @@
+{
+  "evaluated_at_utc": "2026-07-16T12:49:31.478472+00:00",
+  "checkpoint_sha256": "07b5cad2087000d381c99944889593fffba033c4363a7a6ef7be2d47557a26bb",
+  "evaluation_role": "calibration",
+  "manifest": "calibration",
+  "composition_count": 9000,
+  "decoder": "greedy CTC",
+  "raw_prediction_contract": "Unconstrained CTC text; may be empty, noncanonical, or outside 0..255.",
+  "greedy_noncanonical_predictions": 24,
+  "overall": {
+    "correct": 8859,
+    "total": 9000,
+    "accuracy": 0.9843333333333333
+  },
+  "by_length": {
+    "1": {
+      "correct": 2984,
+      "total": 3000,
+      "accuracy": 0.9946666666666667
+    },
+    "2": {
+      "correct": 2951,
+      "total": 3000,
+      "accuracy": 0.9836666666666667
+    },
+    "3": {
+      "correct": 2924,
+      "total": 3000,
+      "accuracy": 0.9746666666666667
+    }
+  },
+  "repeated_digits": {
+    "correct": 1187,
+    "total": 1217,
+    "accuracy": 0.9753492193919474
+  },
+  "beam_width_10": {
+    "correct": 8859,
+    "total": 9000,
+    "accuracy": 0.9843333333333333
+  },
+  "confidence": {
+    "data_role": "threshold selection only",
+    "beam_width": 10,
+    "max_incorrect_acceptance_rate": 0.01,
+    "experiments": {
+      "top_score_per_step": {
+        "raw_threshold": -2.1431021438241666e-05,
+        "false_accepts": 1,
+        "false_rejects": 2518,
+        "incorrect_total": 141,
+        "correct_total": 8859,
+        "noncanonical_predictions": 23,
+        "incorrect_acceptance_rate": 0.0070921985815602835,
+        "false_rejection_rate": 0.2842307258155548
+      },
+      "margin": {
+        "raw_threshold": 6.916724525481752,
+        "false_accepts": 1,
+        "false_rejects": 2060,
+        "incorrect_total": 141,
+        "correct_total": 8859,
+        "noncanonical_predictions": 23,
+        "incorrect_acceptance_rate": 0.0070921985815602835,
+        "false_rejection_rate": 0.23253188847499717
+      },
+      "combined": {
+        "raw_threshold": 0.3458625599112471,
+        "false_accepts": 1,
+        "false_rejects": 2061,
+        "incorrect_total": 141,
+        "correct_total": 8859,
+        "noncanonical_predictions": 23,
+        "incorrect_acceptance_rate": 0.0070921985815602835,
+        "false_rejection_rate": 0.2326447680325093
+      }
+    },
+    "selected": {
+      "heuristic": "margin",
+      "formula": "1 - exp(-max(top-minus-second CTC sequence log-score margin, 0))",
+      "raw_threshold": 6.916724525481752,
+      "confidence_threshold": 0.9990089291427978,
+      "false_accepts": 1,
+      "false_rejects": 2060,
+      "incorrect_total": 141,
+      "correct_total": 8859,
+      "noncanonical_predictions": 23,
+      "incorrect_acceptance_rate": 0.0070921985815602835,
+      "false_rejection_rate": 0.23253188847499717
+    },
+    "acceptance_contract": "Automatic acceptance or commit requires canonical 0..255 text, confidence threshold, and downstream deck validation; provisional rejection or dismissal may still use raw output.",
+    "warning": "Synthetic-only heuristic; not a probability and not production-safe."
+  }
+}

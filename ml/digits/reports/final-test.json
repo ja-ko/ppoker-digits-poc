@@ -1,0 +1,68 @@
+{
+  "evaluated_at_utc": "2026-07-16T12:51:01.869190+00:00",
+  "checkpoint_sha256": "07b5cad2087000d381c99944889593fffba033c4363a7a6ef7be2d47557a26bb",
+  "evaluation_role": "final",
+  "manifest": "final_test",
+  "composition_count": 15000,
+  "calibration_report": {
+    "path": "reports/calibration.json",
+    "sha256": "052a1b564c5796c0139a13a1991a06f61a170271942abfae631b2318d05291e6",
+    "heuristic": "margin",
+    "formula": "1 - exp(-max(top-minus-second CTC sequence log-score margin, 0))",
+    "raw_threshold": 6.916724525481752,
+    "confidence_threshold": 0.9990089291427978,
+    "link_added_post_run": true,
+    "historical_pre_final_freeze_independently_proven": false
+  },
+  "decoder": "greedy CTC",
+  "raw_prediction_contract": "Unconstrained CTC text; may be empty, noncanonical, or outside 0..255.",
+  "greedy_noncanonical_predictions": 25,
+  "overall": {
+    "correct": 14791,
+    "total": 15000,
+    "accuracy": 0.9860666666666666
+  },
+  "by_length": {
+    "1": {
+      "correct": 4974,
+      "total": 5000,
+      "accuracy": 0.9948
+    },
+    "2": {
+      "correct": 4928,
+      "total": 5000,
+      "accuracy": 0.9856
+    },
+    "3": {
+      "correct": 4889,
+      "total": 5000,
+      "accuracy": 0.9778
+    }
+  },
+  "repeated_digits": {
+    "correct": 1989,
+    "total": 2038,
+    "accuracy": 0.9759568204121688
+  },
+  "beam_width_10": {
+    "correct": 14794,
+    "total": 15000,
+    "accuracy": 0.9862666666666666
+  },
+  "confidence": {
+    "data_role": "untouched final evaluation",
+    "heuristic": "margin",
+    "formula": "1 - exp(-max(top-minus-second CTC sequence log-score margin, 0))",
+    "raw_threshold": 6.916724525481752,
+    "confidence_threshold": 0.9990089291427978,
+    "false_accepts": 9,
+    "false_rejects": 3253,
+    "incorrect_total": 206,
+    "correct_total": 14794,
+    "noncanonical_predictions": 26,
+    "incorrect_acceptance_rate": 0.043689320388349516,
+    "false_rejection_rate": 0.2198864404488306,
+    "acceptance_contract": "Automatic acceptance or commit requires canonical 0..255 text, confidence threshold, and downstream deck validation; provisional rejection or dismissal may still use raw output.",
+    "warning": "Synthetic-only heuristic; not a probability and not production-safe."
+  }
+}

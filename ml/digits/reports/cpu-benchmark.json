@@ -1,0 +1,29 @@
+{
+  "started_at_utc": "2026-07-16T12:28:07.084798+00:00",
+  "completed_at_utc": "2026-07-16T12:28:13.872991+00:00",
+  "pipeline_source_sha256": {
+    "dataset.py": "bc77841fd5d760c523093e8611f6aecbee07a42332125e7cf70a721ca2f3ad35",
+    "decode.py": "48b2094e79baa0401580fa3b57f78f1939b5f35a8e30a21c4d4ebd1080d2295a",
+    "download.py": "1287c3a6e35820c436494a5fdfe2d29d92e4fe00fbe33a2bfa59fa6a44473bc2",
+    "evaluate.py": "3c7aed88f4e998c77cffc68925ad70e15fea5d6661bf22caa3bd974c90b510ca",
+    "export.py": "4a11ad5e5d6103604a78fcc1ce2c2a1c3a78da5307ff51c6489faaf58c928994",
+    "freeze.py": "6887d1b8ea209362397f6793cf0415b6b1b6537d154e39b88a47b50ae3607dcb",
+    "model.py": "5ad35a7745b367b9945da393bd68eec8b52bee29895d5f188b8e018a63d30926",
+    "provenance.py": "57ab53807fd15add2e6810eb12cb8e47b4a0e0fc7a0c9c63fdd5fa62ad219a88",
+    "train.py": "64f00acbaa97f772a2b821dbdb0895a7133493ded5093394324f90d169f4e196",
+    "manifests/v2.json": "2c1fa7b09f7a547a7eeb2ae1d0f3f99a29b66fd39e0643a7ec024262becfcc64",
+    "pyproject.toml": "e9854a4c57bd827ae7cf8eaf512ac27799611de5f5976138ade7e6ed5f0679c9",
+    "uv.lock": "62a40d5b058aeaae3b6d9c7bab2ae56df331f0d40b9b38c9f67a0239c7f323fc"
+  },
+  "device": "cpu",
+  "logical_cpus": 32,
+  "torch_threads": 16,
+  "data_loader_workers": 8,
+  "batch_size": 256,
+  "warmup_batches": 2,
+  "measured_batches": 20,
+  "measured_samples": 5120,
+  "seconds": 5.730129619943909,
+  "samples_per_second": 893.522544791948,
+  "last_loss": 0.3899455666542053
+}

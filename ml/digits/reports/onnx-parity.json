@@ -1,0 +1,87 @@
+{
+  "opset": 17,
+  "input_shape": [
+    1,
+    1,
+    32,
+    128
+  ],
+  "output_shape": [
+    1,
+    63,
+    11
+  ],
+  "rtol": 0.001,
+  "atol": 1e-05,
+  "maximum_absolute_difference": 1.52587890625e-05,
+  "decoded_parity": true,
+  "fixtures": [
+    {
+      "final_manifest_index": 0,
+      "label": "0",
+      "pytorch_decoded": "0",
+      "onnx_decoded": "0",
+      "max_absolute_difference": 1.1444091796875e-05,
+      "mean_absolute_difference": 2.4946193661889993e-06
+    },
+    {
+      "final_manifest_index": 1,
+      "label": "47",
+      "pytorch_decoded": "47",
+      "onnx_decoded": "47",
+      "max_absolute_difference": 1.52587890625e-05,
+      "mean_absolute_difference": 2.6894874736171914e-06
+    },
+    {
+      "final_manifest_index": 2,
+      "label": "206",
+      "pytorch_decoded": "206",
+      "onnx_decoded": "206",
+      "max_absolute_difference": 1.1444091796875e-05,
+      "mean_absolute_difference": 2.600584593892563e-06
+    },
+    {
+      "final_manifest_index": 17,
+      "label": "191",
+      "pytorch_decoded": "191",
+      "onnx_decoded": "191",
+      "max_absolute_difference": 1.1444091796875e-05,
+      "mean_absolute_difference": 2.300239657415659e-06
+    },
+    {
+      "final_manifest_index": 29,
+      "label": "150",
+      "pytorch_decoded": "150",
+      "onnx_decoded": "150",
+      "max_absolute_difference": 1.049041748046875e-05,
+      "mean_absolute_difference": 2.366725766478339e-06
+    },
+    {
+      "final_manifest_index": 44,
+      "label": "123",
+      "pytorch_decoded": "123",
+      "onnx_decoded": "123",
+      "max_absolute_difference": 9.5367431640625e-06,
+      "mean_absolute_difference": 2.2873382476973347e-06
+    },
+    {
+      "final_manifest_index": 101,
+      "label": "140",
+      "pytorch_decoded": "140",
+      "onnx_decoded": "140",
+      "max_absolute_difference": 1.239776611328125e-05,
+      "mean_absolute_difference": 2.2550639187102206e-06
+    },
+    {
+      "final_manifest_index": 222,
+      "label": "9",
+      "pytorch_decoded": "9",
+      "onnx_decoded": "9",
+      "max_absolute_difference": 7.62939453125e-06,
+      "mean_absolute_difference": 2.281834440509556e-06
+    }
+  ],
+  "exported_at_utc": "2026-07-16T12:52:56.809103+00:00",
+  "selected_checkpoint_sha256": "07b5cad2087000d381c99944889593fffba033c4363a7a6ef7be2d47557a26bb",
+  "onnx_sha256": "bea69199be71c01a35f4485ad853ef6fd11608c616c452598cb3f330922db9af"
+}

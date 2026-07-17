@@ -197,12 +197,21 @@ collected from users.
 - [x] Begin with 10 fine-tuning epochs and a learning rate around `1e-4`.
 - [x] Save the checkpoint with the best model-selection exact-match accuracy.
 - [x] Report exact-match accuracy by sequence length and for repeated digits.
-- [ ] Measure local CPU training throughput before changing batch or epoch counts.
+- [x] Measure local CPU training throughput before changing batch or epoch counts.
 - [ ] Tune augmentation only in response to documented model-selection failures.
 - [ ] Freeze all composition manifests before using the calibration or final-test
   results.
-- [ ] Treat the final-test result as a report, not a tuning input. Any later model
+- [x] Treat the final-test result as a report, not a tuning input. Any later model
   iteration must use a newly frozen final-test set that has not informed changes.
+
+No model-selection-driven augmentation tuning was needed. The review-remediation
+run corrected ineffective configured translation before retraining, used the
+previously untouched reserve pool as its new final-test pool, and left no unused
+official-test reserve for another iteration.
+
+Current report contents are mutually consistent, but the calibration-to-final
+hash link was added after the run. Historical pre-final freezing is therefore not
+independently proven and the corresponding process items remain unchecked.
 
 ## Browser Recognition Pipeline
 
@@ -282,11 +291,11 @@ type Recognition = {
 - [x] Normal UI does not show alternatives or ask the user to choose one.
 - [x] Confidence in this proof is a provisional heuristic, not a claimed
   probability that the prediction is correct.
-- [ ] Compare deterministic heuristics derived from the top sequence score and
+- [x] Compare deterministic heuristics derived from the top sequence score and
   top-versus-second margin against the frozen synthetic calibration pool.
 - [ ] Document and freeze the selected confidence formula before evaluating the
   untouched synthetic final-test pool.
-- [ ] Select the initial automatic-action threshold against the calibration pool.
+- [x] Select the initial automatic-action threshold against the calibration pool.
 - [ ] Display raw scores, top alternatives, margin, formula inputs, and threshold
   result in diagnostics.
 - [ ] Let the product owner tune the threshold temporarily during qualitative
@@ -430,20 +439,20 @@ ml/digits/
 
 ### Model Tooling
 
-- [ ] Create the `ml/digits/` `uv` project.
-- [ ] Pin Python, PyTorch, torchvision, ONNX, and ONNX Runtime versions.
-- [ ] Add model and checkpoint attribution notices.
-- [ ] Add checksum-verified checkpoint and EMNIST download instructions.
-- [ ] Implement deterministic sequence generation and unit tests.
-- [ ] Generate and freeze model-selection, calibration, and final-test composition
+- [x] Create the `ml/digits/` `uv` project.
+- [x] Pin Python, PyTorch, torchvision, ONNX, and ONNX Runtime versions.
+- [x] Add model and checkpoint attribution notices.
+- [x] Add checksum-verified checkpoint and EMNIST download instructions.
+- [x] Implement deterministic sequence generation and unit tests.
+- [x] Generate and freeze model-selection, calibration, and final-test composition
   manifests plus a reserve-glyph manifest, documenting pool sizes, composition
   counts, and seeds.
-- [ ] Load the published CRNN Tiny checkpoint.
-- [ ] Measure CPU training throughput before committing to the full run.
-- [ ] Fine-tune and evaluate the variable-length model.
-- [ ] Export ONNX at a documented opset.
-- [ ] Verify PyTorch and ONNX Runtime output parity.
-- [ ] Record model checksum, source revision, confidence formula, preprocessing
+- [x] Load the published CRNN Tiny checkpoint.
+- [x] Measure CPU training throughput before committing to the full run.
+- [x] Fine-tune and evaluate the variable-length model.
+- [x] Export ONNX at a documented opset.
+- [x] Verify PyTorch and ONNX Runtime output parity.
+- [x] Record model checksum, source revision, confidence formula, preprocessing
   version, metrics, and training configuration in committed metadata and reports.
 
 ### Web Integration
@@ -459,8 +468,8 @@ ml/digits/
 
 ### Verification
 
-- [ ] Unit-test CTC collapse, repeated digits, and blank handling.
-- [ ] Unit-test prefix-beam path merging, score ordering, margin calculation, and
+- [x] Unit-test CTC collapse, repeated digits, and blank handling.
+- [x] Unit-test prefix-beam path merging, score ordering, margin calculation, and
   the selected confidence formula.
 - [x] Unit-test bounding-box, padding, scaling, and pixel polarity.
 - [x] Test raster geometry, deterministic coverage, and tensor conversion as pure
@@ -484,13 +493,13 @@ ml/digits/
 
 ### Model Gates
 
-- [ ] Overall exact-match accuracy is at least 98% on the untouched generated
+- [x] Overall exact-match accuracy is at least 98% on the untouched generated
   final-test manifest.
-- [ ] No one-, two-, or three-digit final-test bucket is below 97% exact match.
-- [ ] Repeated-digit final-test results are reported separately and meet the same
+- [x] No one-, two-, or three-digit final-test bucket is below 97% exact match.
+- [x] Repeated-digit final-test results are reported separately and meet the same
   97% floor.
-- [ ] ONNX inference matches PyTorch decoding on committed fixtures.
-- [ ] Synthetic calibration and untouched final-test metrics are reported
+- [x] ONNX inference matches PyTorch decoding on committed fixtures.
+- [x] Synthetic calibration and untouched final-test metrics are reported
   separately, including false acceptance of incorrect digit predictions and false
   rejection of correct predictions.
 

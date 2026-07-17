@@ -1,0 +1,5 @@
+{
+  "manifest": "final_test",
+  "purpose": "Deterministically regenerate static-contract ONNX parity inputs without committing raster data.",
+  "final_manifest_indices": [0, 1, 2, 17, 29, 44, 101, 222]
+}

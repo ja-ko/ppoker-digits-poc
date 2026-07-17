@@ -1,0 +1,84 @@
+{
+  "schema_version": 2,
+  "run_id": "digits-crnn-remediation-v2",
+  "stages": [
+    {
+      "order": 1,
+      "name": "cpu_benchmark",
+      "completed_at_utc": "2026-07-16T12:28:13.872991+00:00"
+    },
+    {
+      "order": 2,
+      "name": "training_started",
+      "completed_at_utc": "2026-07-16T12:28:21.580002+00:00"
+    },
+    {
+      "order": 3,
+      "name": "training_and_model_selection",
+      "completed_at_utc": "2026-07-16T12:49:19.003047+00:00"
+    },
+    {
+      "order": 4,
+      "name": "confidence_calibration",
+      "completed_at_utc": "2026-07-16T12:49:31.478472+00:00"
+    },
+    {
+      "order": 5,
+      "name": "untouched_final_evaluation",
+      "completed_at_utc": "2026-07-16T12:51:01.869190+00:00"
+    },
+    {
+      "order": 6,
+      "name": "onnx_export_and_parity",
+      "completed_at_utc": "2026-07-16T12:52:56.809103+00:00"
+    }
+  ],
+  "stage_timestamp_order_validated": true,
+  "selected_checkpoint_sha256": "07b5cad2087000d381c99944889593fffba033c4363a7a6ef7be2d47557a26bb",
+  "onnx_sha256": "bea69199be71c01a35f4485ad853ef6fd11608c616c452598cb3f330922db9af",
+  "report_sha256": {
+    "training": "e848682aeb358128f45ff6075ed83fb474872e89e7b02bfc4aadb4cc120177e7",
+    "cpu_benchmark": "fca11a06b32cd737af09e3e5ee2cb6b8bfd34c4a2d5937614f61fb5cacac48b2",
+    "calibration": "052a1b564c5796c0139a13a1991a06f61a170271942abfae631b2318d05291e6",
+    "final": "daa7f654e4d37a669b48c8c969e23de330a227292bae3ece7e18c9f1f6024510",
+    "onnx_parity": "b45b5ad6b23dd6892ceca1e6513bba8dcdedc050848c03d2e339936cf9a09ef6"
+  },
+  "pipeline_source_sha256_at_training_completion": {
+    "dataset.py": "bc77841fd5d760c523093e8611f6aecbee07a42332125e7cf70a721ca2f3ad35",
+    "decode.py": "48b2094e79baa0401580fa3b57f78f1939b5f35a8e30a21c4d4ebd1080d2295a",
+    "download.py": "1287c3a6e35820c436494a5fdfe2d29d92e4fe00fbe33a2bfa59fa6a44473bc2",
+    "evaluate.py": "3c7aed88f4e998c77cffc68925ad70e15fea5d6661bf22caa3bd974c90b510ca",
+    "export.py": "4a11ad5e5d6103604a78fcc1ce2c2a1c3a78da5307ff51c6489faaf58c928994",
+    "freeze.py": "6887d1b8ea209362397f6793cf0415b6b1b6537d154e39b88a47b50ae3607dcb",
+    "model.py": "5ad35a7745b367b9945da393bd68eec8b52bee29895d5f188b8e018a63d30926",
+    "provenance.py": "57ab53807fd15add2e6810eb12cb8e47b4a0e0fc7a0c9c63fdd5fa62ad219a88",
+    "train.py": "64f00acbaa97f772a2b821dbdb0895a7133493ded5093394324f90d169f4e196",
+    "manifests/v2.json": "2c1fa7b09f7a547a7eeb2ae1d0f3f99a29b66fd39e0643a7ec024262becfcc64",
+    "pyproject.toml": "e9854a4c57bd827ae7cf8eaf512ac27799611de5f5976138ade7e6ed5f0679c9",
+    "uv.lock": "62a40d5b058aeaae3b6d9c7bab2ae56df331f0d40b9b38c9f67a0239c7f323fc"
+  },
+  "pipeline_source_unchanged_during_training": null,
+  "pipeline_source_unchanged_from_training_completion_through_original_export": true,
+  "pipeline_source_audit_scope": "The v2 training code captured hashes only at training completion. Equality through the original export is auditable; unchanged source during training is not.",
+  "evaluation_lineage_audit": {
+    "current_report_consistency_validated": true,
+    "historical_pre_final_freeze_independently_proven": false,
+    "scope": "Calibration and final report roles, formula, thresholds, and current hashes agree, but the calibration hash reference was added after the historical run."
+  },
+  "seeds": {
+    "training": 72016,
+    "glyph_split": 20260716,
+    "model_selection_composition": 31001,
+    "calibration_composition": 41001,
+    "final_composition": 61001
+  },
+  "augmentation_tuning": {
+    "performed": false,
+    "reason": "No model-selection-driven augmentation tuning was needed; review remediation made configured translation effective before this full rerun."
+  },
+  "final_evaluation_used_for_tuning": false,
+  "post_final_model_or_data_tuning": false,
+  "post_export_review_updates": "Pipeline provenance enforcement, tests, and JSON wording were updated after export without retraining or modifying the ONNX artifact.",
+  "post_export_review_updated_at_utc": "2026-07-16T13:08:45+00:00",
+  "final_pool_provenance": "The untouched v1 reserve glyph pool became the v2 final pool; the previously evaluated v1 final pool was retired."
+}

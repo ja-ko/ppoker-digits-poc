@@ -5,6 +5,7 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { stripVTControlCharacters } from "node:util";
 
 import { withTimeout } from "./preview-server.mjs";
 
@@ -50,13 +51,14 @@ async function waitForUrl(child, output, expectPhoneQr, timeoutMs = 45_000) {
   const waiting = new Promise((resolve, reject) => {
     const inspect = (chunk) => {
       output.value += chunk.toString();
-      const match = output.value.match(
+      const plainOutput = stripVTControlCharacters(output.value);
+      const match = plainOutput.match(
         /http:\/\/(?:localhost|127\.0\.0\.1):(\d+)\//,
       );
       if (
         !match ||
         (expectPhoneQr &&
-          (!output.value.includes("Scan this QR code to open http://") ||
+          (!plainOutput.includes("Scan this QR code to open http://") ||
             !output.value.includes("\u001b[97;40m")))
       )
         return;
@@ -90,7 +92,17 @@ async function waitForUrl(child, output, expectPhoneQr, timeoutMs = 45_000) {
     child.once("error", failed);
     child.once("exit", exited);
   });
-  return withTimeout(waiting, timeoutMs, "root launcher startup", cancel);
+  try {
+    return await withTimeout(
+      waiting,
+      timeoutMs,
+      "root launcher startup",
+      cancel,
+    );
+  } catch (error) {
+    error.message += `\nLauncher output:\n${output.value}`;
+    throw error;
+  }
 }
 
 async function expectServerStopped(origin) {
@@ -120,9 +132,10 @@ async function exerciseLauncher(
     const started = await waitForUrl(child, output, expectPhoneQr);
     origin = started.origin;
     if (expectPhoneQr) {
+      const plainOutput = stripVTControlCharacters(output.value);
       assert(
         /Scan this QR code to open http:\/\/(?!127\.0\.0\.1|localhost)[^\s]+ on your phone:/.test(
-          output.value,
+          plainOutput,
         ),
         "launcher did not print a LAN URL for the phone QR code",
       );

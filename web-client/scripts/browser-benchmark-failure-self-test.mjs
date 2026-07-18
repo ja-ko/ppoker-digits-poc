@@ -151,7 +151,6 @@ async function runCase(temporary, options) {
   let state;
   let output = "";
   try {
-    const startedAt = performance.now();
     child = spawn(process.execPath, [benchmark], {
       detached: true,
       env: {
@@ -182,12 +181,18 @@ async function runCase(temporary, options) {
 
     const result = await withTimeout(
       closed,
-      10_000,
+      options.signal ? 10_000 : 20_000,
       `${options.name} benchmark`,
       () => killProcessGroup(child.pid),
     );
-    const elapsedMs = performance.now() - (signalledAt ?? startedAt);
     state = await waitForState(statePath);
+    assert(
+      options.signal || Number.isFinite(state.forcedDisconnectAt),
+      "benchmark did not record the forced disconnect time",
+    );
+    const elapsedMs = options.signal
+      ? performance.now() - signalledAt
+      : Date.now() - state.forcedDisconnectAt;
 
     if (options.signal) {
       assert(

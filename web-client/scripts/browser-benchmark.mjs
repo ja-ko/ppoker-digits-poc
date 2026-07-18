@@ -151,6 +151,7 @@ let previewStarting;
 let cleanupPromise;
 let shutdownSignal;
 let testOrigin;
+let forcedDisconnectAt;
 let signalHandlersInstalled = false;
 
 function writeTestState(stage, origin, cleanupError) {
@@ -164,6 +165,7 @@ function writeTestState(stage, origin, cleanupError) {
       origin: testOrigin,
       profile,
       stage,
+      ...(forcedDisconnectAt && { forcedDisconnectAt }),
       ...(cleanupError && { cleanupError }),
     }),
   );
@@ -332,6 +334,8 @@ try {
       { expression: "new Promise(() => {})", awaitPromise: true },
       sessionId,
     );
+    forcedDisconnectAt = Date.now();
+    writeTestState("disconnect-started", started.origin);
     signalBrowser(browser, "SIGKILL");
     await pending;
     throw new Error("forced CDP disconnect unexpectedly completed its command");
